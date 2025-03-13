@@ -4,7 +4,7 @@
 10 P%=&900
 20[OPT 0
 30 .sei SEI:RTS
-40 .cli CL:RTS
+40 .cli CLI:RTS
 50]
 60 CALL sei
 70 PRINT SQR2
