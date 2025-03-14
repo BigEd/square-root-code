@@ -16,7 +16,7 @@
 ```
 fx2pipe -a > trace.bin
 
-decode6502 --machine=master --phi2= --sync= --mem=00f -ahiys --trigger=a7b5,a015 trace.bin > trace-6502decoder-sqr2.txt
+decode6502 --machine=master --phi2= --sync= --mem=00f -ahiysf --trigger=a7b5,a015 trace.bin > trace-6502decoder-sqr2.txt
 
 decode6502 --machine=master --phi2= --sync= --mem=00f -q --profile=instr --trigger=a7b5,a015 trace.bin > profile-6502decoder-sqr2.txt
 ```
