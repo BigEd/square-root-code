@@ -65,7 +65,6 @@ H $a37c`c : sec                      01 ff 00 e6 nvdizC (60)
 H $a37d`c : rts                      01 ff 00 e8 nvdizC (a2)
 H $adb9`c : bcc  $adce               01 ff 00 e8 nvdizC (00)
 H $adbb`c : rts                      01 ff 00 ea nvdizC (ad)
-
 H $97a2`c : beq  $979c               01 ff 00 ea nvdizC (00)
 H $97a4`c : bmi  $979b               01 ff 00 ea nvdizC (00)
 H $97a6`c : jmp  $828d               01 ff 00 ea nvdizC (00)

@@ -1,0 +1,229 @@
+   1 H $828d`c : stz $35                 
+   1 H $828f`c : lda $2d                 
+   1 H $8291`c : sta $2e                 
+   1 H $8293`c : bpl  $829a              
+   1 H $829a`c : bne  $82c8              
+   1 H $829c`c : stz $34                 
+   1 H $829e`c : ldy $2a                 
+   1 H $82a0`c : lda $2c                 
+   1 H $82a2`c : bne  $82be              
+   1 H $82a4`c : stz $33                 
+   1 H $82a6`c : lda $2b                 
+   1 H $82a8`c : beq  $82d8              
+   1 H $82d8`c : stz $32                 
+   1 H $82da`c : tya                     
+   1 H $82db`c : bne  $82f4              
+   1 H $82f4`c : ldy  #$89               
+   1 H $82f6`c : lsr  A                  
+   7 H $82f7`c : dey                     
+   7 H $82f8`c : rol  A                  
+   7 H $82f9`c : bpl  $82f7              
+   1 H $82fb`c : sty $30                 
+   1 H $82fd`c : stz $2f                 
+   1 H $82ff`c : sta $31                 
+   1 H $8301`c : rts                     
+   1 H $8306`c : bne  $832f              
+   1 H $832f`c : ldy $30                 
+   1 H $8331`c : dey                     
+   1 H $8332`c : asl $35                 
+   1 H $8334`c : rol $34                 
+   1 H $8336`c : rol $33                 
+   1 H $8338`c : rol $32                 
+   1 H $833a`c : rol  A                  
+   1 H $833b`c : bpl  $8331              
+   1 H $833d`c : cpy $30                 
+   1 H $833f`c : sty $30                 
+   1 H $8341`c : bcc  $8345              
+   1 H $8345`c : tay                     
+   1 H $8346`c : sta $31                 
+   1 H $8348`c : rts                     
+   1 H $979f`c : jsr  $ad78              
+   1 H $97a2`c : beq  $979c              
+   1 H $97a4`c : bmi  $979b              
+   1 H $97a6`c : jmp  $828d              
+   1 H $a2dd`c : stz $31                 
+   1 H $a2df`c : stz $32                 
+   1 H $a2e1`c : stz $33                 
+   1 H $a2e3`c : stz $34                 
+   1 H $a2e5`c : stz $35                 
+   1 H $a2e7`c : stz $47                 
+   1 H $a2e9`c : stz $48                 
+   1 H $a2eb`c : ldx  #$ff               
+   1 H $a2ed`c : stx $49                 
+   1 H $a2ef`c : cmp  #$2e               
+   1 H $a2f1`c : beq  $a348              
+   1 H $a2f3`c : cmp  #$3a               
+   1 H $a2f5`c : bcs  $a2d6              
+   1 H $a2f7`c : sbc  #$2f               
+   1 H $a2f9`c : bmi  $a2d6              
+   1 H $a2fb`c : sta $35                 
+   1 H $a2fd`c : lda $47                 
+   1 H $a2ff`c : beq  $a303              
+   1 H $a303`c : iny                     
+   1 H $a304`c : lda ($19),Y             
+   1 H $a306`c : cmp  #$3a               
+   1 H $a308`c : bcs  $a34c              
+   1 H $a30a`c : sbc  #$2f               
+   1 H $a30c`c : bcc  $a342              
+   1 H $a342`c : eor  #$fe               
+   1 H $a344`c : ora $47                 
+   1 H $a346`c : bne  $a357              
+   1 H $a357`c : sty $1b                 
+   1 H $a359`c : ldy $31                 
+   1 H $a35b`c : bne  $a385              
+   1 H $a35d`c : lda $32                 
+   1 H $a35f`c : bmi  $a385              
+   1 H $a361`c : sta $2d                 
+   1 H $a363`c : beq  $a36b              
+   1 H $a36b`c : lda $35                 
+   1 H $a36d`c : sta $2a                 
+   1 H $a36f`c : lda $34                 
+   1 H $a371`c : sta $2b                 
+   1 H $a373`c : lda $33                 
+   1 H $a375`c : sta $2c                 
+   1 H $a377`c : lda $48                 
+   1 H $a379`c : bne  $a37e              
+   1 H $a37b`c : inc  A                  
+   1 H $a37c`c : sec                     
+   1 H $a37d`c : rts                     
+   1 H $a6a2`c : lsr $31                 
+   1 H $a6a4`c : stx $34                 
+   1 H $a6a6`c : ldx  #$03               
+   3 H $a6a8`c : cmp $31                 
+   3 H $a6aa`c : bcc  $a6ae              
+   3 H $a6ac`c : sbc $31                 
+   3 H $a6ae`c : php                     
+   3 H $a6af`c : asl  A                  
+   3 H $a6b0`c : dex                     
+   3 H $a6b1`c : bne  $a6a8              
+   1 H $a6b3`c : plp                     
+   1 H $a6b4`c : ror  A                  
+   1 H $a6b5`c : plp                     
+   1 H $a6b6`c : ror  A                  
+   1 H $a6b7`c : plp                     
+   1 H $a6b8`c : ror  A                  
+   1 H $a6b9`c : sta $35                 
+   1 H $a6bb`c : pla                     
+   1 H $a6bc`c : sta $33                 
+   1 H $a6be`c : pla                     
+   1 H $a6bf`c : sta $32                 
+   1 H $a6c1`c : pla                     
+   1 H $a6c2`c : sta $31                 
+   1 H $a6c4`c : bmi  $a712              
+   1 H $a6c6`c : jsr  $8306              
+   1 H $a6c9`c : bra  $a712              
+   1 H $a712`c : lda $35                 
+   1 H $a714`c : bpl  $a725              
+   1 H $a716`c : asl  A                  
+   1 H $a717`c : bne  $a71e              
+   1 H $a71e`c : inc $34                 
+   1 H $a720`c : bne  $a725              
+   1 H $a725`c : lda $2f                 
+   1 H $a727`c : beq  $a739              
+   1 H $a739`c : stz $35                 
+   1 H $a73b`c : lda  #$ff               
+   1 H $a73d`c : rts                     
+   1 H $a808`c : jsr  $979f              
+   1 H $a80b`c : lda $31                 
+   1 H $a80d`c : beq  $a805              
+   1 H $a80f`c : lda $2e                 
+   1 H $a811`c : bmi  $a7c0              
+   1 H $a813`c : lda $30                 
+   1 H $a815`c : lsr  A                  
+   1 H $a816`c : php                     
+   1 H $a817`c : adc  #$41               
+   1 H $a819`c : sta $30                 
+   1 H $a81b`c : lda $31                 
+   1 H $a81d`c : plp                     
+   1 H $a81e`c : bcc  $a829              
+   1 H $a829`c : stz $3e                 
+   1 H $a82b`c : stz $3f                 
+   1 H $a82d`c : ldx  #$68               
+   1 H $a82f`c : sec                     
+   1 H $a830`c : sbc  #$90               
+   1 H $a832`c : bcs  $a838              
+   1 H $a834`c : adc  #$50               
+   1 H $a836`c : ldx  #$48               
+   1 H $a838`c : sta $31                 
+   1 H $a83a`c : txa                     
+   1 H $a83b`c : ldx  #$fc               
+   1 H $a83d`c : ldy  #$0c               
+   4 H $a83f`c : sta $41,X               
+  28 H $a841`c : asl $33                 
+  28 H $a843`c : rol $32                 
+  28 H $a845`c : rol $31                 
+  28 H $a847`c : lda $31                 
+  28 H $a849`c : cmp $3d                 
+  28 H $a84b`c : bne  $a857              
+  28 H $a857`c : bcc  $a875              
+  13 H $a859`c : lda $33                 
+  13 H $a85b`c : sbc $3f                 
+  13 H $a85d`c : sta $33                 
+  13 H $a85f`c : lda $32                 
+  13 H $a861`c : sbc $3e                 
+  13 H $a863`c : sta $32                 
+  13 H $a865`c : lda $31                 
+  13 H $a867`c : sbc $3d                 
+  13 H $a869`c : sta $31                 
+  13 H $a86b`c : tya                     
+  13 H $a86c`c : clc                     
+  13 H $a86d`c : adc $41,X               
+  13 H $a86f`c : bcc  $a878              
+   1 H $a871`c : inc $40,X               
+   1 H $a873`c : bra  $a878              
+  15 H $a875`c : tya                     
+  15 H $a876`c : eor $41,X               
+  28 H $a878`c : sta $41,X               
+  28 H $a87a`c : tya                     
+  28 H $a87b`c : lsr  A                  
+  28 H $a87c`c : tay                     
+  28 H $a87d`c : bne  $a841              
+   4 H $a87f`c : ldy $40,X               
+   4 H $a881`c : phy                     
+   4 H $a882`c : cpx  #$fd               
+   4 H $a884`c : bne  $a88a              
+   1 H $a886`c : lda $34                 
+   1 H $a888`c : sta $33                 
+   4 H $a88a`c : bcs  $a899              
+   1 H $a88c`c : ply                     
+   1 H $a88d`c : ldy  #$04               
+   4 H $a88f`c : asl $35                 
+   4 H $a891`c : rol $34                 
+   4 H $a893`c : rol  A                  
+   4 H $a894`c : dey                     
+   4 H $a895`c : bne  $a88f              
+   1 H $a897`c : tsb $33                 
+   4 H $a899`c : lda  #$80               
+   4 H $a89b`c : ldy  #$c0               
+   4 H $a89d`c : inx                     
+   4 H $a89e`c : bne  $a83f              
+   1 H $a8a0`c : ldx $3d                 
+   1 H $a8a2`c : lda $31                 
+   1 H $a8a4`c : stx $31                 
+   1 H $a8a6`c : ldx $40                 
+   1 H $a8a8`c : asl  A                  
+   1 H $a8a9`c : cmp $31                 
+   1 H $a8ab`c : bcc  $a8b0              
+   1 H $a8ad`c : sbc $31                 
+   1 H $a8af`c : inx                     
+   1 H $a8b0`c : jmp  $a6a2              
+   1 H $ad78`c : ldy $1b                 
+   1 H $ad7a`c : inc $1b                 
+   1 H $ad7c`c : lda ($19),Y             
+   1 H $ad7e`c : cmp  #$20               
+   1 H $ad80`c : beq  $ad78              
+   1 H $ad82`c : cmp  #$2d               
+   1 H $ad84`c : beq  $ad19              
+   1 H $ad86`c : cmp  #$22               
+   1 H $ad88`c : beq  $ad5b              
+   1 H $ad8a`c : cmp  #$2b               
+   1 H $ad8c`c : bne  $ad91              
+   1 H $ad91`c : cmp  #$8e               
+   1 H $ad93`c : bcc  $ad9c              
+   1 H $ad9c`c : cmp  #$3f               
+   1 H $ad9e`c : bcs  $adac              
+   1 H $ada0`c : cmp  #$2e               
+   1 H $ada2`c : bcs  $adb6              
+   1 H $adb6`c : jsr  $a2dd              
+   1 H $adb9`c : bcc  $adce              
+   1 H $adbb`c : rts                     
