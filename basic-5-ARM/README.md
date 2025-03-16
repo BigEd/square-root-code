@@ -4,6 +4,7 @@ We don't yet have a trace or a profile of this running.
 
 Comments are original.
 
+```
 ;square root of FACC
 FSQRT ROUT
  TEQ FACC,#0
@@ -63,3 +64,5 @@ FSQRT ROUT
  MOVCS FACC,FACC,RRX
  ADDCS FACCX,FACCX,#1
  MOV PC,R14
+```
+```
