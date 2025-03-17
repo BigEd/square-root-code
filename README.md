@@ -38,3 +38,9 @@ Timings from tracing execution of a single calculation of the square root of 2, 
 
 We notice that the later code uses cheaper (simpler) instructions, as well as fewer of them.
 
+Looking at instruction mixes, we see
+
+- basic 2 uses 1536 shifts, 1422 load/store, 536 add/sub/compare, 881 branches
+- basic 4 uses 272 shifts, 432 load/store, 157 add/sub/compare, 202 branches
+- basic 4r32 uses 147 shifts, 220 load/store, 103 add/sub/compare, 167 branches
+
