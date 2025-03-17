@@ -24,8 +24,9 @@ By timing Basic code we can profile the square root function in three versions o
 180 PRINT TIME-T-E
 ```
 
-9.20s on beeb, basic 2, copyright 1982
-2.02s on master 128, os 3.20, basic 4, copyright 1984
-1.19s on master 128, os 3.50, basic 4.32, copyright 1988
+Results from b2 emulator:
+- 9.20s on beeb, basic 2, copyright 1982
+- 2.02s on master 128, os 3.20, basic 4, copyright 1984
+- 1.19s on master 128, os 3.50, basic 4.32, copyright 1988
 
 
