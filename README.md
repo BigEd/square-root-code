@@ -12,5 +12,20 @@ Resources:
 - [basic 4r32 dissassembly](https://github.com/hoglet67/BBCBasic4r32/blob/master/disassembly/Basic432.asm#L7737) by hoglet
 - basic V arm code [at gtoal's site](https://gtoal.com/acorn/arm/Basic/)
 
+Preliminary findings:
+By timing Basic code we can profile the square root function in three versions of 6502 Basic. Code suggested by Dominic Beesley - subtract the cost of a loop which only assigns from the cost of a loop which does a square root.
+
+```
+100 p=PI:e=EXP1:r=p/e:T=TIME
+110 FORi=0TO999:x=x:NEXT
+120 E=TIME-T
+160 T=TIME
+170 FORi=0TO999:x=SQRr:NEXT
+180 PRINT TIME-T-E
+```
+
+9.20s on beeb, basic 2, copyright 1982
+2.02s on master 128, os 3.20, basic 4, copyright 1984
+1.19s on master 128, os 3.50, basic 4.32, copyright 1988
 
 
