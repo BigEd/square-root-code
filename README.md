@@ -13,6 +13,7 @@ Resources:
 - basic V arm code [at gtoal's site](https://gtoal.com/acorn/arm/Basic/)
 
 Preliminary findings:
+
 By timing Basic code we can profile the square root function in three versions of 6502 Basic. Code suggested by Dominic Beesley - subtract the cost of a loop which only assigns from the cost of a loop which does a square root.
 
 ```
@@ -29,4 +30,11 @@ Results from b2 emulator:
 - 2.02s on master 128, os 3.20, basic 4, copyright 1984
 - 1.19s on master 128, os 3.50, basic 4.32, copyright 1988
 
+Timings from tracing execution of a single calculation of the square root of 2, on real hardware, using 6502Decoder:
+
+- 17407 cycles, 4844 ins, 3.59 cpi with Basic 2
+- 3921 cycles, 1169 ins, 3.35 cpi with Basic 4
+- 2179 cycles, 702 ins, 3.10 cpi with Basic 4r32
+
+We notice that the later code uses cheaper (simpler) instructions, as well as fewer of them.
 
