@@ -40,7 +40,8 @@ We notice that the later code uses cheaper (simpler) instructions, as well as fe
 
 Looking at instruction mixes, we see
 
-- basic 2 uses 1536 shifts, 1422 load/store, 536 add/sub/compare, 881 branches
-- basic 4 uses 272 shifts, 432 load/store, 157 add/sub/compare, 202 branches
-- basic 4r32 uses 147 shifts, 220 load/store, 103 add/sub/compare, 167 branches
+- basic 2 uses 1506 shifts, 1277 load/store, 513 add/sub/compare, 836 branches
+- basic 4 uses 248 shifts, 377 load/store, 141 add/sub/compare, 168 branches
+- basic 4r32 uses 139 shifts, 159 load/store, 91 add/sub/compare, 134 branches
 
+(Using `egrep -c -i -w` with one of `'asl|lsr|ror|rol'`, `'lda|sta'`, `'adc|sbc|cmp'`, `'b[a-z][a-z]'`)
