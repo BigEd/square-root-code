@@ -1,7 +1,5 @@
 Here's the floating point square root routine from the Basic V sources [here](https://gtoal.com/acorn/arm/Basic/).
 
-We don't yet have a trace or a profile of this running.
-
 Comments are original.
 
 ```
@@ -65,4 +63,5 @@ FSQRT ROUT
  ADDCS FACCX,FACCX,#1
  MOV PC,R14
 ```
-```
+
+We now have a trace from B-em, with a Sprow ARM as a co-processor, running AB. It's slightly different code.
