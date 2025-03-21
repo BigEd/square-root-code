@@ -1,5 +1,20 @@
 Here's the floating point square root routine from the Basic V sources [here](https://gtoal.com/acorn/arm/Basic/).
 
+The version we have the sources for will report itself like this:
+```
+BBC Basic V version 1.00 (C) Acorn 1987
+```
+although the nearby binary AB.bin (45328 bytes) contains
+```
+ARM2 BBC Basic V version 1.00 (C) Acorn 1987
+```
+
+The version I can run in B-em on an ARM copro (39864 bytes) reports itself like this:
+```
+ARM BBC Basic V version 1.00 for ARM Second Processor (C) Acorn 1986
+```
+A trace from that version is in this directory
+
 Comments are original.
 
 ```
