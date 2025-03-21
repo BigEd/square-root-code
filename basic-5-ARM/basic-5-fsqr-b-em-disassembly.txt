@@ -1,0 +1,46 @@
+    00009c18 e3300000 teq r0, #0
+    00009c1c 01a0f00e moveq pc, lr
+    00009c20 e3330000 teq r3, #0
+    00009c24 4a000324 bmi &a8bc
+    00009c28 e3a04101 mov r4, #&40000000
+    00009c2c e1b010a1 lsrs r1, r1, #1
+    00009c30 e2a11040 adc r1, r1, #64
+    00009c34 32400101 subcc r0, r0, #&40000000
+    00009c38 22400102 subcs r0, r0, #&80000000
+    00009c3c 33a07201 movcc r7, #&10000000
+    00009c40 23a07302 movcs r7, #&8000000
+    00009c44 e0244007 eor r4, r4, r7
+    00009c48 e1500004 cmp r0, r4
+    00009c4c 20400004 subcs r0, r0, r4
+    00009c50 20244087 eorcs r4, r4, r7, lsl #1
+    00009c54 e0244007 eor r4, r4, r7
+    00009c58 e0800000 add r0, r0, r0
+    00009c5c e1b070e7 rors r7, r7, #1
+    00009c60 5afffff7 bpl &9c44
+    00009c64 e3a06000 mov r6, #0
+    00009c68 e3a02000 mov r2, #0
+    00009c6c e0266007 eor r6, r6, r7
+    00009c70 e1500004 cmp r0, r4
+    00009c74 01520006 cmpeq r2, r6
+    00009c78 3a000003 bcc &9c8c
+    00009c7c e0522006 subs r2, r2, r6
+    00009c80 e0c00004 sbc r0, r0, r4
+    00009c84 e0266087 eor r6, r6, r7, lsl #1
+    00009c88 e0244fa7 eor r4, r4, r7, lsr #31
+    00009c8c e0266007 eor r6, r6, r7
+    00009c90 e0922002 adds r2, r2, r2
+    00009c94 e0a00000 adc r0, r0, r0
+    00009c98 e1a070a7 lsr r7, r7, #1
+    00009c9c e3570201 cmp r7, #&10000000
+    00009ca0 1afffff1 bne &9c6c
+    00009ca4 e1807002 orr r7, r0, r2
+    00009ca8 e1b02086 lsls r2, r6, #1
+    00009cac e0a40004 adc r0, r4, r4
+    00009cb0 51a0f00e movpl pc, lr
+    00009cb4 e3370000 teq r7, #0
+    00009cb8 03800001 orreq r0, r0, #1
+    00009cbc 01a0f00e moveq pc, lr
+    00009cc0 e2900001 adds r0, r0, #1
+    00009cc4 21a00060 rrxcs r0, r0
+    00009cc8 22811001 addcs r1, r1, #1
+    00009ccc e1a0f00e mov pc, lr
