@@ -8,14 +8,22 @@ although the nearby binary AB.bin (45328 bytes) contains
 ```
 ARM2 BBC Basic V version 1.00 (C) Acorn 1987
 ```
+and
+```
+ARM2 BBC Basic V assembled on 21&1/2th April 1987
+```
+(and the sources have the same "assembled on" datestamp but without the "ARM2"
 
 The version I can run in B-em on an ARM copro (39864 bytes) reports itself like this:
 ```
 ARM BBC Basic V version 1.00 for ARM Second Processor (C) Acorn 1986
 ```
-A trace from that version is in this directory
+A trace from that version is in this directory. This version responds to HELP with
+```
+BBC Basic V assembled on 14th April 1986
+```
 
-Comments are original.
+Comments below original from Acorn, we think.
 
 ```
 ;square root of FACC
