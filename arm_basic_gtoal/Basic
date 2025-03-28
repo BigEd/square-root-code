@@ -3,7 +3,7 @@
 ;> Basic
  ORG &8000
 RELEASE * 1;1 for release version: no MANDEL or Roger
-RRX * 0;1 for 2 micron ARM use
+;RRX * 0;1 for 2 micron ARM use
 NOHELP * 1;1 for no help messages
  ^ 0
 WRITEC # 1
