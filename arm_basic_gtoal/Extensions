@@ -1,0 +1,1079 @@
+. > Extensions
+.
+.  AAA  BBBB
+. A   A B   B
+. A   A B   B
+. AAAAA BBBB
+. A   A B   B
+. A   A B   B
+. A   A BBBB
+.
+. main text in roman $rm
+. some example text in sans serif $ss
+. all BASIC keywords and program segments in $tt
+.
+.library "a4atl"
+.foot
+$rm $c Page ~%page
+.endf
+.set dindent 4
+.macro example
+.ensure 10
+.blank 2
+$ss Example:$rm
+.display flow
+.endm
+.macro sect ""
+.ensure 8
+.section $""~~1$""
+.endm
+.tabset 5
+$chead _ARM BBC BASIC (AB)_$chead
+.blank 4
+.picture "*" "100.0" "200.0"
+ /acorn { /x exch def matrix currentmatrix currentpoint translate x 288 div
+ dup scale /do /fill load def /s {16 div 72 mul } def /h1 36 s def /f1 .26 def
+ -18 s 0 moveto -18 3 f1 mul add s h1 f1 mul s 18 3 f1 mul sub s h1 f1 mul s
+ 18 s 0 curveto closepath do /h2 30 s def /f2 .17 def -19 s -3 s moveto
+ -19 3 f2 mul add s -3 h2 f2 mul sub s 19 3 f2 mul sub s -3 h2 f2 mul sub s
+ 19 s -3 s curveto closepath do -20.5 s -17.5 s moveto
+ 0 -23 s 0 -23 s 22 s -31 s curveto 17 s -33 s lineto
+ 0 -25 s 0 -25 s -21.25 s -19 s curveto closepath do
+ -1.4 s -15 s moveto -1.4 s -24 s lineto 1.4 s -24 s lineto 1.4 s -15 s lineto
+ closepath do setmatrix } def 0 70 moveto 36 acorn
+.endpicture
+.blank 4
+.sect Introduction
+The ARM BASIC interpreter is version V. It contains all version IV
+improvements ($tt ON..PROC, VDU|..$rm ) [see end for list of improvements
+over version I BASIC], lots of speed ups and many interesting new commands.
+.sect $tt WHILE $rm loop
+$tt WHILE $rm <expr>
+.newline
+block
+.newline
+$tt ENDWHILE $rm <sd>
+.newline
+(Where <sd> is a statement delimiter e.g. ":" or ELSE or NewLine).
+If the condition is initially $tt FALSE$rm , then the next $tt ENDWHILE $rm
+at the same level of nesting will be searched for.
+.example
+A=0:WHILE A<10:A=A+1:ENDWHILE
+.endd
+.sect $tt CASE $rm statement
+$tt CASE $rm <expr> $tt OF$rm<return>
+.newline
+$tt WHEN $rm <expr>{,<expr>}^<sd><any number of statements/lines>
+.newline
+$tt OTHERWISE $rm <any number of statements/lines>
+.newline
+$tt ENDCASE $rm
+.blank 2
+The following restrictions must be observed:
+.newline
+$tt WHEN, OTHERWISE $rm and $tt ENDCASE $rm must be the first non-space
+object on a line.
+.newline
+$tt CASE .. OF $rm must be the last thing on a line.
+.newline
+CASE statements may be textually nested.
+.newline
+$tt OTHERWISE $rm is optional, if not present then no fault will be generated.
+.example
+CASE Jim OF
+WHEN 0:PRINT"Zero"
+WHEN 1,2:PRINT"One or Two"
+OTHERWISE PRINT"None of the above"
+ENDCASE
+.endd                            
+.sect Block structured $tt IF $rm
+A fully block structured multiline IF..THEN..ELSE..ENDIF implementation,
+allowing nested block structured or ordinary (single line) IF statements.
+Other single line statements (like ON ERROR) do not become multiline even
+if this is used on the end of the line which one is on.
+.newline
+$tt IF $rm <expression> $tt THEN $rm <return>
+.newline
+<any number of statements/lines>
+.newline
+$tt ELSE $rm <any number of statements/lines>
+.newline
+$tt ENDIF$rm
+.newline
+The following restrictions must be observed:
+.newline
+$tt ELSE $rm and $tt ENDIF $rm must be the first non-space object on a line.
+.newline
+$tt THEN $rm must be the last thing on the line.
+.newline
+$tt ELSE $rm is optional, if not present then no fault will be generated.
+.newline
+.example
+IF Jim THEN
+  IF Fred THEN
+  PRINT"Jim and Fred were True"
+  ELSE
+  PRINT"Jim was True but Fred was False"
+  ENDIF
+ELSE
+PRINT"Jim was False"
+ENDIF
+.endd
+.sect Function and Procedure libraries.
+To support modular programming BBC BASIC V allows programs to be loaded and
+consulted for unknown procedures and functions: thus libraries can be built
+up and used without APPENDing the programs to the current program (but the
+total text is still present). LIBRARY loads an internal form BBC BASIC
+program onto the heap (where it will remain until it is CLEARed along with
+all the dynamic variables), INSTALL loads the program into memory above the
+stack, moving the stack and HIMEM positions down as it does so (and therefore
+INSTALL cannot be used inside loops or procedures). The LVAR command lists
+the first line of libraries or installed libraries; the order of listing is
+also the order of searching - which is simply (a) search current program (b)
+search any LIBRARYs, last mentioned first (the order shown by LVAR) (c)
+search any INSTALLed libraries, again last mentioned first.
+
+It is recommended that a library's first line contains the full name of the
+library, and refers to (at least) a uniquely named procedure which will give
+help (e.g. PROCMatrixLibraryHelp) on the use of the library (e.g. any
+procedures to call for initialisation). Libraries cannot use GOTO: any
+reference to line numbers will refer to the current program, not to the line
+numbers with which the libarary was constructed.
+
+Installed libraries can only be removed by leaving the interpreter. Since it
+is possible to install libraries from the command line, one should put REM
+INSTALL"Matrices" comments at the beginning of programs which use particular
+libraries - for one's own sanity; to help others if you give away or sell the
+program; and to enable compiler writers to find the libraries when compiling
+the program.
+.sect Local (to loops, procedures etc.) error trapping.
+In prior BBC BASICs the interpreter forgot all PROC, FOR etc nesting when an
+error occured, but BBC BASIC V lets control resume at any nesting level.
+.newline
+$tt ON ERROR $rm {$tt LOCAL$rm } $tt PRINT $rm etc.
+.newline
+This defines the state which the interpreter will use when an error occurs to
+be that when the $tt ON ERROR LOCAL $rm statement was executed.
+.example
+FORZ=-10TO10
+ON ERROR LOCAL PRINT"Can't":NEXT
+PRINT1/Z
+NEXT
+.endd
+.sect Save and restore error control status (onto the stack)
+Since errors can now be used inside procedures, saving and restoring the
+error status is also made possible.
+.newline
+$tt LOCAL ERROR $rm (may be used anywhere, unlike LOCAL A etc)
+.newline
+   Makes the error control status local; i.e. saves the error status on the
+stack.
+.newline
+$tt RESTORE ERROR
+.newline
+   $rm Restore error status from the stack. A fatal error will arise if the
+next thing on the stack is not the error status.
+.newline
+Returning from a function or procedure will restore any error status it finds
+on the stack. $tt LOCAL ERROR $rm must be the last thing to be made local in
+a procedure or function. Multi line IF cannot be used on the ON ERROR line.
+.example
+REM "safe" routine for taking reciprocals
+DEF FNReciprocal(A)
+REM going to use error trapping, so save status
+LOCAL ERROR
+REM if error occurs will resume here
+ON ERROR reciprocalzerocount+=1:=0
+REM do job!
+=1/A
+REM end of function will restore error status
+.endd
+.sect Whole Array Operations
+AB has full array operations, including the ability to pass arrays by reference
+to procedures and functions which is documented in the next section. In the
+following examples A, B and C (with suffixes) refer to any arrays of compatible
+sizes. The following operations on arbitary arrays are supported:
+.display "flow" "asis"
+A$()=B$()
+A%()=B%()
+A()=B()
+A$()=<factor>
+A%()=<factor>
+A()=<factor>
+A$()=B$()+C$()
+A%()=B%()+C%()
+A()=B()+C()
+A%()=B%()-C%()
+A()=B()-C()
+A()=-B()
+A%()=-B%()
+A$()=B$()+<factor>  and  A$()=<factor>+B$()  and  A$()+=<expression>
+A()=B()+<factor>    and  A()=<factor>+B()    and  A()+=<expression>
+A%()=B%()+<factor>  and  A%()=<factor>+B%()  and  A%()+=<expression>
+A()=B()-<factor>    and  A()=<factor>-B()    and  A()-=<expression>
+A%()=B%()-<factor>  and  A%()=<factor>-B%()  and  A%()-=<expression>
+A()=B()*<factor>    and  A()=<factor>*B()
+A%()=B%()*<factor>  and  A%()=<factor>*B%()
+A()=B()*C()         element by element multiplication
+A%()=B%()*C%()
+A()=B()/<factor>    and  A()=<factor>/B()
+A()=B()/C()         element by element division
+A%()=B%()/B%()      integer division (DIV)
+A%()=B%()/<factor>  and  A%()=<factor>/B%()
+A()=B().C()         matrix (i.e. 2 d array) multiplication
+A%()=B%().C%()
+.endd
+Compatible sizes means identical except for matrix multiplication.
+
+The matrix multiplication operation can cope with multiplying a row vector by
+a two dimensional matrix to yield a row vector; it can also cope with
+multiplying a two dimensional matrix by a column vector to produce a column
+vector. Both forms of vector are represented by the same form: a single
+dimension array. The matrix element Aij is represented as the array element
+A(i,j) - first subscript is row, last subscript is column.
+
+There is no restriction on A, B and C in the above table being different
+arrays: the interpreter will cope with any identical matrices it finds, but
+may issue an error message in the case of matrix multiplication if there is
+not enough room.
+
+In addition to the above operations which return arrays, there is a scalar
+returning operation, SUM which returns the arithmetic sum or string
+concatenation of an entire array.
+.example
+coordinate()=coordinate().transformation()
+A()=1:PRINT"There are ";SUM(A())" elements.":REM only kidding
+.endd
+.sect Pass arrays to procedures and functions by reference
+.example
+DEF PROCA(A(),A%(),A~~$())
+PROCA(FRED(),jim%(),harry~~$())
+.endd
+.sect Local arrays in procedures or functions
+BASIC V can allocate local arrays, using space for the duration of the
+procedure or function only and then returning it. Such arrays are rather
+hard to debug interactively since the space is scavenged when the procedure
+is left to get to direct mode! Debugging should be done with global arrays
+or local error handling.
+.example
+LOCAL A()
+DIM A(10):REM local array
+.endd
+.sect Discover the number of dimensions and the size of each of an array
+$tt PRINT DIM(FRED()) $rm the number of dimensions
+.newline
+$tt PRINT DIM(FRED(),4) $rm the size of the fourth dimension
+.example
+DEF FNScalarProduct(A(),B())
+IFDIM(A())<>1ORDIM(B())<>1 ERROR100,"Scalar product needs vectors"
+IFDIM(A(),1)<>DIM(B(),1) ERROR100,"Scalar product vectors should be same size"
+LOCAL C():DIM C(DIM(A(),1))
+C()=A()*B():=SUMC()
+.endd
+.sect Enhanced $tt TRACE $rm statement
+AB has the ability to trace procedures and functions and the ability to $tt
+TRACE $rm in single step mode
+.display
+TRACE PROC
+TRACE STEP ON
+TRACE STEP 1000
+TRACE STEP PROC
+.endd
+Single step mode gives the number or procedure name in {} instead of [] and
+waits for a key to be pressed before continuing.
+.sect Improved $tt PRINT $rm accuracy
+The accuracy has been improved and in "G" mode in $tt PRINT $rm or $tt STR~~$
+$rm .05 prints as .05 not 5E~~-2
+.sect New statements/features
+.tabset 30
+.ensure 5
+.display flow
+$tt BPUT~~#<channel>,<string>$t $rm outputs contents of <string> + CHR~~$10 (unless ;)
+$tt CIRCLE x,y,r$t $rm circle outline, centre x,y radius r
+$t equivalent to $tt MOVE x,y:PLOT&95,x+r,y
+$tt CIRCLE FILL x,y,r$t $rm circle fill, centre x,y radius r
+$t equivalent to $tt MOVE x,y:PLOT&9D,x+r,y
+$tt COLOUR a,b$t $rm define logical colour a to be physical colour b
+$t equivalent to $tt VDU19,a,b;0;
+$tt COLOUR a,r,g,b$t $rm define logical colour a to be physical colour <r,g,b>
+$t equivalent to $tt VDU19,a,16,r,g,b
+$tt ERROR <number>,<string>$t $rm causes error reported as <string>, ERR <number>
+$tt GCOL c$t $rm sets graphics colour
+$t equivalent to $tt GCOL 0,c
+$tt FILL a,b$t $rm flood fill in foreground over background from a,b
+$tt LINE x1,y1,x2,y2$t $rm draw a line from x1,y1 to x2,y2
+$t equivalent to $tt MOVE x1,y1:DRAW x2,y2
+$tt LINE INPUT$t $rm equivalent to INPUT LINE
+$tt MID~~$(a~~$,n{,m})=b~~$ $t $rm assign characters from b~~$ into a~~$, starting at position n
+$t up to the smallest of m, LENb~~$, LENa~~$-n
+$tt MOUSE x,y,z$t $rm sets x,y to current mouse position (in range 0..65535)
+$t sets z to buttons: bit 2, 1, 0 are LEFT, MIDDLE,
+$t RIGHT (bits set if button down)
+$tt MOUSE OFF$t $rm turn off mouse
+$tt MOUSE ON$t $rm turn on mouse pointer 1
+$tt MOUSE ON n$t $rm turn on mouse pointer n
+$tt MOUSE RECTANGLE x,y,w,h$t $rm limit mouse to rectangle
+$tt MOUSE STEP a$t $rm set mouse multiplier to a in both x and y directions
+$tt MOUSE STEP a,b$t $rm set multiplier to a and b in x and y
+$tt MOUSE TO x,y$t $rm position mouse and pointer at x,y
+$tt OFF$t $rm turn the cursor off
+$tt ON$t $rm turn the cursor on
+$tt ORIGIN x,y$t $rm set graphics origin to x,y
+$t equivalent to $tt VDU29,x;y;
+$tt POINT x,y$t $rm plot a single point at x,y
+$t equivalent to $tt PLOT69,x,y
+$tt POINT TO x,y$t $rm position pointer at x,y
+$tt QUIT$t $rm leaves the interpreter
+$tt RECTANGLE x,y,a,b$t $rm rectangular outline, position x,y width a, height b
+$tt RECTANGLE FILL x,y,a,b$t $rm rectangle fill
+$tt RECTANGLE x,y,a,b TO u,v$t $rm copy rectangle to u,v
+$tt RECTANGLE FILL x,y,a,b TO u,v$t $rm move rectangle to u,v
+$tt SOUND OFF$t $rm turns the sound off (with *fx210)
+$tt SOUND ON$t $rm turns the sound on (with *fx210,0,0)
+$tt SWAP <lv>,<lv>$t $rm exchanges the values of the variables (which must exist)
+$t SWAP can also interchange arrays - e.g. SWAP A(),B()
+.endd
+.sect New functions
+.display
+$tt END$t $rm returns top of memory used: equivalent to DIM P% -1
+$tt GET~~$~~#<channel>$t $rm gets string to next CHR~~$10 or CHR~~$13 (or EOF)
+$tt LEFT~~$(<string>)$t $rm returns the left LEN<string>-1 characters
+$tt REPORT~~$$t $rm function that returns the error REPORT as a string
+$tt RIGHT~~$(<string>)$t $rm returns rightmost character
+.endd
+.sect New binary operators
+.display
+$tt <<$t $rm arithmetic shift left by the number of bits given by
+$t righthand side
+$tt >>$t $rm arithmetic shift right by the number of bits given by
+$t righthand side
+$tt >>>$t $rm logical shift right by the number of bits given by
+$t righthand side
+$t <<, >> and >>> have equal priority to the ordinary relations
+$t and, like them, one cannot write a>>4<<2;
+$t it would have to be (a>>4)<<2
+.endd
+.sect New Unary operators
+.display
+$tt %$t $rm binary constants e.g. %1010101 is &55
+$tt |$t $rm floating point indirection like ~~$ e.g. |Var%
+.endd
+.sect New Assignment operators
+"+=" and "-=" allow add (or concatenate) or subtract to occur during
+assignment. The following points must be observed:
+.numberpars
+A variable cannot be brought into existence with these operators: $tt X=X+1
+$rm would create X, set it equal to 0 and then 1; $tt X+=1 $rm would be an
+error if X did not already exist.
+.nextp
+The conversion of values to real or integer happens $it before $rm the add/
+subtract operation. This only affects an integer assignment with a real
+expression: $tt X%=90:X%-=1.2 $rm gives 89 i.e. 90-TRUNC(1.2), whereas $tt
+X%=90:X%=X%-1.2 $rm gives 88 i.e. TRUNC(FLOAT(90)-1.2).
+.endp
+.example
+LET X+=1
+A(1,2,3)+=2
+X%-=VALA$
+X$+="A"
+.endd
+.sect New commands
+.ensure 5
+.display flow
+$tt *ab @XXXXXXXX,XXXXXXXX$t $rm startup with incore text (X hex char)
+$tt *ab <filename>$t $rm startup and run with text file
+$t AB will automatically insert lines without line numbers
+$t and renumber the entire program when it meets some.
+$t The "-load" keyword will cause a program to be loaded only.
+$tt APPEND$t $rm Appends file to program.
+$tt EDIT$t $rm Calls the ARM BASIC Editor with a ARMBE command.
+$t Passes a CLI control block (see below) in which LINE points to the
+$t rest of the line. Returning R0<>0 will cause a CLEAR to be done.
+$tt HELP$t $rm prints various usages
+$tt HELP <keyword>$t $rm prints help on this keyword
+$tt LISTO$t $rm 0 gives no enhancements, as before
+$t bit 0=1: space after the line number
+$t bit 1=1: indent structures
+$t bit 2=1: split at the : statement delimiter
+$t bit 3=1: don't list the line number; error at line number
+$t          references
+$t bit 4=1: list tokens in lower case
+$tt LVAR$t $rm displays all variables, procedures and functions
+$tt SAVE$t $rm save <return> saves program to name after $tt REM > $rm
+$t on the first line
+$tt TWIN$t $rm calls Twin analagously to CB calling Edit
+$t $tt (Twin @XXXXXXXX,XXXXXXXX;AB)
+$t $rm these commands no longer accept line numbers or $tt IF$rms
+$tt TWINO$t $rm $tt TWIN $rm with $tt LISTO $rm capability
+.endd
+.sect Rewritten string storage
+The storage for strings has been completely redesigned. The old scheme, in
+use from BASIC II, worked as follows:
+.newline
+$ss Each string descriptor kept a $tt Maximum Length (MLEN) $ss and a $tt
+Current Length (CLEN)$ss. If $tt MLEN $ss is large enough for the string to
+be allocated, it is done in the current space; if not large enough a new
+space is allocated from the free space (and the old memory thrown away. The
+system was "tuned" by two special tricks: (1) over allocation: new memory was
+added that was four bytes more than required; (2) re-use of contiguous store:
+if the memory to be deallocated was contiguous with the top of free space,
+then it was kept.
+.newline
+$rm This last trick performed particularly well on the "worst case" program:
+$tt FORZ=1TO255:A~~$=A~~$+"-":NEXT$rm.
+.newline
+The new allocation scheme does away with all of this. It works as follows:
+.newline
+$ss String descriptors only keep the $tt Current Length (CLEN)$ss: this is
+both the length of the string and, when rounded to words, the size of the
+store allocated to the string. When a string is stored, the current space is
+immediately used if the number of words is compatible; otherwise the space is
+deallocated: it is stored on the appropriate member of an array of free
+lists, each list having one size in words. This makes allocation of the new
+space for a string very quick: check the free list corresponding to the
+desired length, if there is an entry, take it; otherwise use new space (with
+the re-use of contiguous store, as before).$rm
+.newline
+The new mechanism means:
+.numberpars
+Strings do not totally "loose" free space (as they did in BASIC IV).
+.nextp
+String descriptors are one byte smaller: significant in arrays of strings.
+.nextp
+Because the length of a free list entry is implied, the smallest allocation
+unit is one word. Which is as small as the rest of the interpreter can
+allocate.
+.nextp
+It is meaningless to allocate a maximum size to a string at the beginning of
+a program to ensure the allocation will go OK: this was recommended for the
+early interpreters. Because there is so much more RAM on ARM systems, these
+statements cause no difficulty.
+.nextp
+Strings are always on word boundaries, so word copying can be done to move
+the value to/from the string accumulator.
+.nextp
+The invariant "if the contents of a string is remembered at one time it can
+be put back into the string (at the new address in the descriptor) later" is
+broken: this relied on $tt MLEN $rm never decreasing. This invariant was used
+by function and procedure return when there were local strings: in BASIC V it
+has been reprogrammed to use the new techniques of allocation, though this is
+slightly slower.
+.nextp
+It is harder for machine code programs to update strings. With the previous
+system the string merely had to be long enough at one time to hold the
+desired string: machine code could then use the address in the descriptor and
+update $tt CLEN$rm. Setting the $tt MLEN $rm to 255 was thus enough. With the
+new algorithm, one could either set $tt CLEN $rm to 255 and accept the loss
+of space; or use the allocation procedure from the list of support routines
+that CALL exports.
+.endp
+Of course this is not a cure to _all_ problems! For example, cycically
+extending strings of the same length by the same amount
+.display "asis"
+FORY=0TO10
+   FORZ=0TO1000
+   A$(Z)+="FRED"
+   NEXT
+NEXT
+.endd
+will still chew up space, since a shorter string is never allocated from the
+table of old space chunks. But the space is still known about, just in case.
+.sect More line numbers
+The maximum line number has been increased from 32767 to 65279 to help deal
+with the longer programs possible. The end of the program is thus indicated
+by &0D &FF where before any byte with the top bit set would have worked. It
+is, therefore, possible that there will be some program binary images which
+will give "Bad program" when LOADed into BASIC V. The RENUMBER command has
+been improved to notice the overflow from the maximum line number.
+.sect Revised error descriptions
+.display "flow" "asis"
+ 0,"Silly!"
+ 0,"No room to do this renumber"
+ 0,"Line numbers larger than 65279 would be generated by this renumber"
+ 0,"No room"
+ 0,"Line too long"
+ 0,"Stopped"
+ 0,"Invalid LISTO option"
+ 0,"Invalid TWINO option"
+ 0,"Corruption of stack"
+ 0,"Error control status not found on stack for RESTORE ERROR"
+ 0,"Missing incore name"
+ 0,"LIST/TWIN found line number reference"
+ 0,"HELP has no information on this keyword"
+ 1,"No such mnemonic"
+ 1,"No such suffix on EQU"
+ 2,"Bad immmediate constant"
+ 2,"Bad address offset"
+ 2,"Bad shift"
+ 3,"Bad register"
+ 3,"Duplicate register in multiply"
+ 4,"Missing ="
+ 4,"Missing = in FOR statement"
+ 4,"Mistake"
+ 5,"Missing ,"
+ 6,"Type mismatch: number needed"
+ 6,"Type mismatch: numeric variable needed"
+ 6,"Type mismatch: string needed"
+ 6,"Type mismatch: string variable needed"
+ 6,"Type mismatch: array needed"
+ 6,"Type mismatch between arrays"
+ 6,"Can't assign to array of this size"
+ 6,"Array type mismatch as parameter"
+ 6,"Can't SWAP arrays of diffent types"
+ 7,"Not in a function"
+ 8,"Too low a value for $<number>"
+ 9,"Missing """
+ 10,"DIM() function needs an array"
+ 10,"No room for this dimension"
+ 10,"No room to do matrix multiply with source(s) the same as destination"
+ 10,"Impossible dimension"
+ 10,"No end of dimension list )"
+ 10,"Bad DIM statement"
+ 10,"Can't DIM negative ammount"
+ 10,"No room for this DIM"
+ 10,"Arrays cannot be redimensioned"
+ 12,"Items can only be made local in a function or procedure"
+ 13,"Not in a procedure"
+ 14,"Reference array incorrect"
+ 14,"Unknown array"
+ 14,"Unknown array in DIM() function"
+ 14,"Undimensioned array"
+ 15,"Subscript out of range"
+ 15,"Incorrect number of subscripts"
+ 16,"Syntax error"
+ 17,"Escape"
+ 18,"Division by zero"
+ 19,"String too long"
+ 20,"Number too big"
+ 20,"Number too big for arc Sine or arc Cosine"
+ 21,"Negative root"
+ 22,"Logarithm range"
+ 23,"Accuracy lost in Sine/Cosine/Tangent"
+ 24,"Exponent range"
+ 26,"Unknown or missing variable"
+ 26,"Can't use array reference here"
+ 27,"Missing )"
+ 27,"Missing ]"
+ 27,"Missing {"
+ 27,"Missing }"
+ 28,"Bad Hex"
+ 28,"Hex number too large"
+ 28,"Bad Binary"
+ 29,"No such function/procedure"
+ 30,"Bad call of function/procedure"
+ 31,"Arguments of function/procedure incorrect"
+ 31,"Invalid RETURN actual parameter"
+ 31,"Invalid array actual parameter"
+ 32,"Not in a FOR loop"
+ 33,"Can't match FOR"
+ 34,"Bad FOR control variable"
+ 35,"The step cannot be zero"
+ 36,"Missing TO"
+ 38,"Not in a subroutine"
+ 39,"ON syntax"
+ 40,"ON range"
+ 41,"No such line"
+ 42,"Out of data"
+ 43,"Not in a REPEAT loop"
+ 45,"Missing #"
+ 46,"Not in a WHILE loop"
+ 47,"Missing ENDCASE"
+ 48,"OF missing from CASE statement"
+ 48,"CASE..OF statement must be the last thing on a line"
+ 49,"Missing ENDIF"
+ 50,"Bad MOUSE variable"
+ 51,"Too many input expressions for SYS"
+ 51,"Too many output variables for SYS"
+ 52,"Can't install library"
+ 52,"Bad program used as function/procedure library"
+.endd
+.sect New error handler
+The standard error handler resets @% so that it's numeric printing is ok. It
+then puts @% back to the user's value.
+.sect Better tabulation
+Because $tt COUNT $rm is now based on a 32 bit value.
+.sect Fully Token compatible with CB etc.
+The token values for all commands have been radically changed to provide all
+the new tokens needed by the extensions, but since they can't be in a
+program, noone should notice.
+.sect Recoded FOR statement
+Integer for statements that try to overflow will stop e.g.
+.newline
+$tt FOR B%=&7FFFFFFF-10 TO &7FFFFFFF $rm
+.newline
+will stop immediately.
+.sect Fixes lexical errors
+The lexical analyser of BBC BASIC (all versions to date) incorrectly analyses
+$tt IF $rm statements with a missing $tt THEN $rm clause when the next object
+is one of $tt PTR~~#, PAGE, TIME, LOMEM, HIMEM$rm. AB can interpret such
+lexical errors correctly at run time (without paying a run time overhead).
+.sect Entry time syntax check
+The interactive prompt analyses lines to be input into the program (those
+with a number) and reports simple syntax errors i.e. mismatched round
+brackets, double quotes or attempts to refer to a line number greater than
+65279.
+.sect System time left unchanged
+Assignment to TIME (e.g. TIME=0) no longer changes the operating system's
+time. AB keeps a relative offset from the system time which is adjusted when
+required and is zero initially. Thus AB does not harm the 5 byte value of the
+real time clock with its 4 byte values.
+.sect Invalid values rejected
+Assignment of invalid values to PAGE, LOMEM and HIMEM is ignored: a warning
+message is ALWAYS printed, the value is left unchanged and the interpreter
+carries on running.
+.sect Full ARM assembler
+The mnemonics are accepted with no alterations. OPT functions as for the 6502
+assembler in BASIC II. If one had written:
+.newline
+$tt .loop LDA~~#43:JSR OSWRCH:DEX:BNE loop
+.newline
+$rm with the 6502 assembler, one could now write:
+.newline
+$tt .loop MOV R0,~~#43:SWI OSWRCH:SUBS R1,R1,~~#1:BNE loop$rm
+.newline
+In addition to the "normal" abilities of the assembler, ";", "\" and "REM"
+can be used to start a comment. DCD, DCW, DCB and DCS are synonyms for EQUD,
+EQUW, EQUB and EQUS. ALIGN will align the program counter to the next word
+boundary. ADR is a pseudoop just like AASM/OBJASM.
+.sect Calling native ARM assembler routines
+When a CALL or USR instruction is issued with no parameters other than the
+address (e.g. CALL &FFEE or PRINT USR&FFF4), BASIC V will emulate the actions
+that the previous 6502 based interpreters would have done using the Acorn MOS
+for the 6502. USR and CALL when the address is not one of the ones known by
+Acorn MOS will access native ARM code as described below, and this must be
+explicitly avoided in programs which assemble their own code - e.g. by
+allocating 64K of rubbish before any assembly code. USR functions like CALL
+but returns the integer value of R0 to the interpreter - and cannot, of
+course, be followed by a list of variable names. When returning to BASIC
+nothing will be done unless the processor's V flag is set: r0 is then assumed
+to point to an error block of <error number word> <error string of bytes> <0>
+form. When the machine code is entered by CALL, the following registers are
+used to pass status:
+.display
+r0   A%
+r1   B%
+r2   C%
+r3   D%
+r4   E%
+r5   F%
+r6   G%
+r7   H%
+r8   points to BASIC's ARGP workspace
+r9   pointer to list of lvs
+r10  number of lvs
+r11  STRACC
+r12  LINE (current statement pointer: needed for error messages)
+r13  points to FD stack
+r14  link back to ab and environment information pointer
+.endd
+The pointer to the list of lvs (assignable variable specifiers) is always
+valid, even when the number of lvs is 0. The list is in REVERSE order (since
+the values were pushed onto a 'FD' stack and a pointer is given to the lowest
+address used). Each lv in the list is composed of two word aligned words, the
+first one being the address concerned, the second being the type of the lv as
+follows:
+.display "flow" "asis"
+BASIC       Type   Address points to
+?fred          0   byte aligned byte
+!fred          4   byte aligned word
+fred%          4   word aligned word
+fred%(jim)     4   word aligned word
+|fred          5   byte aligned 5 bytes
+fred           5   byte aligned 5 bytes
+fred(jim)      5   byte aligned 5 bytes
+fred$        128   byte aligned 5 bytes: address of string and length
+fred$(jim)   128   byte aligned 5 bytes: address of string and length
+$fred        129   byte aligned bytes, terminated by CR (13)
+fred%()    256+4   word aligned word pointing to array of fred%
+fred()     256+5   word aligned word pointing to array of fred
+fred$()  256+128   word aligned word pointing to array of fred$
+.endd
+The type 128 five bytes have a byte aligned word pointing to the first
+character of the string which will be on a word boundary, followed by a byte
+aligned ¡byte containing the length 0..255. If the word pointer is zero the
+length will also be zero. The array reference types (256+n) provided a value
+which points to a word aligned word. If the array has not been allocated
+(e.g. it has been used as a parameter to a procedure or did not exist prior
+to this call), then this word will contain zero, signifying an "undimensioned
+array". Otherwise the word will point to a word aligned list of integer
+subscript limits (the values in the DIM statement plus 1) terminated by a
+word of zero; followed by a word which contains the total number of entries
+in the array followed by the zero'th element of the array. For example the
+array declared by $tt DIM A(10,11) $rm would have a list of:
+.display
+pointer   > word 11
+pointer+4 > word 12
+pointer+8 > word 0
+pointer+12> word 132
+pointer+16> first element in array
+.endd
+The access method into the arrays is given by the following algorithm:
+.display "flow" "asis"
+position = 0
+number = 0
+REPEAT
+  IF subscript(number) > array(number) THEN fault
+  number = number+1
+  IF number<>total THEN position = (position+subscript)*array(number)
+UNTIL no_more_subscripts
+position = position*size(array element)+base_address
+.endd
+This means that the last subscript references adjacent elements. For a simple
+two dimensional array DIM#A(LIMI-1,LIMJ-1) the address of A(I,J) is
+(I*LIMI+J)*size+base_address.
+
+The value in r14 can be returned to with MOV PC,R14 but it also points to an
+array of useful values:
+.display
+ B CALL2REAL ;0th entry in table is return address
+;the following values are words containing an offset from ARGP (R8)
+;word aligned 256 bytes
+ & STRACC ;string accumulator
+;word aligned words offset from ARGP
+ & PAGE ;current program PAGE
+ & TOP ;current program TOP
+ & LOMEM ;current variable start
+ & HIMEM ;current stack end
+ & MEMLIMIT ;limit of available memory
+ & FSA ;free space start (high water mark/FD stack limit)
+ & TALLY ;value of COUNT
+ & TIMEOF ;offset from TIME readable by OSWORD
+ & ESCWORD ;exception flag word (contains escflg, trcflg)
+ & WIDTHLOC ;value of WIDTH-1
+;internal BASIC routines
+ B VARIND ;get value of lv
+ B STOREA ;store value into lv
+ B STSTORE ;store string into type 128 strings
+ B LVBLNK ;convert string "variable name" to lv address and type
+ B CREATE ;create new variable
+ B EXPR ;use expression analyser on string
+ B MATCH ;lexical analyse source string to destination string
+ B TOKENADDR ;pointer to string for particular token
+ & 0 ;end of list
+.endd
+The internal routines are only guarenteed to work in processor user mode.
+The following functions are provided:
+.numberpars -
+VARIND: entry with r0=address of lv, r9=type of lv, r12=LINE.
+.newline
+Returns with r0..r3 as the value, r9 the type of the value as follows:
+.display
+r9         type    where
+0          string  in STRACC, r2 points to end (r2-STRACC is length)
+&40000000  integer in r0
+&80000000  float   in r0..r3
+.endd
+Uses no other registers (including stack). Possible error if asked to take
+value of an array fred(): will need r12 valid for this error to be reported
+correctly.
+.nextp
+STOREA: entry with r0..r3 value, r9=type of value and r4=address of lv,
+r5=type of lv, r8=ARGP and r12=LINE (for errors). Will convert between
+various formats e.g. integer and float or produce an error if conversion is
+impossible.
+.newline
+Returns with r0..r7 destroyed. Stack not used.
+.nextp
+STSTORE: entry with r4=address of lv, r2=length (address of end), r3=address
+of start, r8=ARGP and r12=LINE (for out of store error). The string must
+start on a word boundary, the length must be 255 or less.
+.newline
+Uses r0, r1, r5, r6, r7. Preserves input registers. Stack not used.
+.nextp
+LVBLNK: entry with r11 pointing to start of string, r8=ARGP, r12=LINE (many
+errors possible e.g. subscript error in array) and r13=stack (will be used
+for evaluation of subscript list: calls EXPR). The string will be processed
+to read one variable name and provide an address and type which can be given
+to VARIND.
+.newline
+Returns with NE status if a variable has been found. Address in r0, type (see
+above) in r9. If there is an EQ status then if the carry is set it cannot
+possibly be a variable else if the carry is clear it could be, but isn't
+known to the interpreter (and registers are set to values for CREATE).
+.newline
+Uses all registers.
+.nextp
+CREATE: create a variable. Input is the failure of LVBLNK to find something.
+Thus we have r10=first char of item, r3=second char of item or 0, r4 and r11
+pointers to start and end of other chars, r8=ARGP, r12=LINE, r13=STACK, r9
+contains the number of zero bytes on the end. It is recommended that CREATE
+is called immediately after a failed LVBLNK only.
+.newline
+Uses all registers. Return parameters as LVBLNK.
+
+The LVBLNK and CREATE routines can be combined together to provide a routine
+which checks for a variable to assign to and creates it if necessary:
+.display "asis"
+SAFELV STMFD SP!,{R14}
+       BL LVBLNK
+       LDMNEFD SP!,{PC}
+       LDMCSFD SP!,{PC}
+       BL CREATE
+       LDMFD SP!,{PC}
+.endd
+.nextp
+EXPR: entry with r11 pointing to start of string, r8=ARGP, r12=LINE, r13=STACK.
+EXPR stops after reading one expression (like those in the PRINT statement).
+.newline
+Uses all registers. The value is returned like VARIND. If status EQ it read a
+string, if status NE and plus it read an integer word (in r0) if status NE
+and minus it read a floating point value (in r0..r3). r9 contains the type:
+the status can be recreated by TEQ r9,#0. r10 contains the delimiting
+character, r11 points to the one after.
+.nextp
+MATCH: entry with r1=source string (terminated by ASCII CR=13),
+r2=destination string, r3=MODE, r4=CONSTA, r13=STACK. Note that MATCH does
+not need ARGP or LINE. The MODE value is 0 for LEFT MODE (i.e. before an
+equals sign) and 1 for RIGHT MODE (after an equals sign or in an expression).
+The CONSTA value is 0 for don't pack constants using token &8D, 1 for pack.
+Both MODE and CONSTA will be updated during use of the routine e.g. GOTO
+will change CONSTA to 1 to read the constant, PRINT will change MODE to 1
+to read the expression. Starting values of MODE=0 and CONSTA=0 will lexcially
+analyse a statement; MODE=1 and CONSTA=0 an expression; MODE=0 and CONSTA=1
+is used to extract line numbers in command mode and probably has little use.
+MODE affects the values assigned to tokens for HIMEM etc.
+.newline
+Uses r0-r5. r1 and r2 are left pointing after the CR codes in the strings.
+r5 contains status about failures to analyse the line correctly: it can be
+used or disregarded: values >= &1000 imply mismatched brackets, bit 8 set
+implies a line number was found that was too large to be put into a &8D
+constant and if r5 AND 255 equals 1 it implies mismatched string quotes.
+.nextp
+TOKENADDR: entry with r0 as the token value, r12=pointer to next byte of
+token string. The value in r12 is only used when the address of a two byte
+token is required. No other register are used or required.
+.newline
+Returns r1 as the pointer to the first character of a string, terminated by a
+value >=&7F (which is the first byte of the token value). r0 is set to the
+address of the start of the token table itself. r12 will have been
+incremented by 1 if a two byte token was used.
+.endp
+.sect Operating System call statement
+A general statement for calling the operating system directly has been
+introduced. Existing BBC BASIC programs called the operating system using
+the 6502 CALL and USR procedures, but these are hard to extend to other
+systems. The new function "SYS" isolates calling value, input parameters
+and output parameters:
+.newline
+$tt SYS <expression> [,[<expression>]]^ [TO <variable>[,[<variable>]]^[;<variable>]]
+.newline
+$rm The first expression is the calling value: a number here is an SWI code
+number while a string will be converted to a number by the operating system.
+The optional list of expressions following this (up to a maximum of 8) are
+passed in successive registers as follows:-
+.numberpars -
+If a numeric value it is made an integer and put in the register.
+.nextp
+If a string then the string has a 0 (ASCII NUL) added to its end: it is
+placed on BASIC's stack at a word aligned start address and a pointer to it
+is put in the register.
+.endp
+Values default to 0. The optional TO variable list following is treated in
+the reverse manner:-
+.numberpars -
+If the variable to assign to is numeric the integer in the register is
+converted to appropriate format and stored.
+.nextp
+If the variable to assign to is string the register is treated as a
+pointer to a string terminated by 0, 10 or 13 (ASCII NUL, LF or CR). The
+strings given on input can be overwritten (but should not be extended) and
+the same addresses returned on output.
+.endp
+.example
+SYS 0,ASC"$":REM Write a $
+SYS 5,"CAT":REM OSCLI"CAT"
+SYS 16 TO A,B,C:REM do a GetEnv into A B C
+SYS 16 TO A,,C:REM as above, but B not needed
+SYS "Find","GetEnv" TO GetEnv%:REM find numeric value of GetEnv
+.endd
+.sect Registers set up for CLI calls
+Because many extensions to the old 6502 based interpreters are programmed
+using operating system CLI calls (with * or OSCLI) which decode the string
+and grope BASIC's internals, BASIC V provides extra information when using *
+or OSCLI to allow these systems to be ported onto the ARM. (Note that this
+does not happen for SYS 5,"fred").
+ Because the high user mode registers are not conveniently readable from
+other modes, the low registers pass values that must be moved to the correct
+registers - see the documentation for CALL.
+.display
+r0   contains CLI string pointer
+r1   contains &BA51Cxxx
+r2   ARGP
+r3   LINE
+r4   current SP
+r5   environment information pointer (as CALL)
+.endd
+The value in register 1 should be inspected by any routine in order to
+validate that the call is, indeed, from BASIC (it may be a good idea to check
+r2..r5 for valid addresses, also); the value is also at r5!-4. The initial
+ARM BASIC interpreter will provide &BA51C005, the next &BA51C006 etc. The
+value in LINE should not be relied on (except within EDIT), but it is
+sufficient for BASIC to produce the correct line number error definition.
+When BASIC is eventually returned to at the end of the SWI CLI call, its
+(user mode) registers must not have been disturbed.
+.newpage
+$c _$bf Appendix 1: Version II improvements$rm_
+.blank 4
+.numberpars
+$tt ELSE $rm no longer leaves a byte on the hardware stack in $tt ON..
+GOTO/GOSUB$rm
+.nextp
+$tt INSTR $rm no longer leaves the shorter string of $tt INSTR("AB","ABC")
+$rm on the software stack
+.nextp
+The lexical analyser is now called correctly from $tt EVAL $rm so that $tt
+EVAL("TIME") $rm works
+.nextp
+$tt ABS $rm can take the absolute value of integers without bit 31 set
+without returning a string (i.e. $tt PRINT -ABS1 $rm works)
+.nextp
+A new statement $tt OSCLI $rm has been introduced, shortest abbreviation
+$tt OS.$rm , token value &FF. It takes a string expression and gives it to
+the operating system, e.g. $tt OSCLI "KEY "+STR~~$Z+"This is key
+"+STR~~$Z$rm . It has no unique errors of it's own, just the normal
+$tt Type mismatch $rm error.
+.nextp
+The value of the token for $tt OPENIN $rm has changed to &8E and now just
+opens files for input only using the &40 open. A new keyword $tt OPENUP $rm
+(open for update) has been introduced with the old token value &AD which
+opens files for update using the &C0 open. This results in old programs
+automatically changing to $tt OPENUP $rm when they are $tt LOAD$rm ed into
+the new interpreter.
+.nextp
+The $tt LN $rm and $tt LOG $rm functions are completely recoded to make them
+more accurate and to avoid the $tt LN(2E-39) $rm bug.
+.nextp
+The fix routine avoids the $tt INT1E38 $rm bug.
+.nextp
+The $tt SIN/COS $rm functions are completely recoded to make them more
+accurate.
+.nextp
+The binary to decimal string conversion routines, used for $tt PRINT $rm and
+$tt STR~~$$rm , have been changed to allow the use of 10 figures of precision
+on printing. The initial value of @% is now &0000090A to give the same
+results on startup. Note that @%=10 now gives the internal default of 10
+figures. The changes allow the maximum positive integer 2147483647 to be
+printed out (and indeed get 2^33 right). $tt STR~~$$rm  when not controlled
+by @% uses the new 10 figure default which will result in it giving different
+answers to before e.g. 7.7 (a recurring binary fraction) will be converted to
+7.699999999.
+.nextp
+The bug associated with $tt ON ERROR GOTO 9999 $rm has been removed
+.nextp
+A $tt MODE $rm change now resets $tt COUNT $rm
+.nextp
+In $tt INPUT $rm ';' is introduced and functions as the ',' does
+.nextp
+Fatal errors have been introduced. Errors whose $tt ERR $rm is zero
+cause an $tt ON ERROR OFF $rm effect while they are being processed
+.nextp
+$tt STOP $rm has been redefined as a fatal error, this causes the
+$tt STOP at line 0 $rm message to be corrected to $tt STOP$rm
+.nextp
+The $tt No room $rm error is a fatal error
+.nextp
+The standard error handling procedures do not use stack space any
+more. The situation of running out of all free space no longer causes error
+messages to be printed out followed by a $tt No room $rm message
+.nextp
+The allocation of space for strings has been made slightly more
+efficient, it can cope with $tt REPEAT A~~$=A~~$+"*": UNTIL LEN A~~$ = 255$rm
+and only allocate 255 bytes. It still has problems if B~~$ is being done
+alternately with A~~$
+.nextp
+A new error 45 $tt "Missing ~~#" $rm arrives if $tt PTR, EOF, BGET, BPUT, EXT
+$rm have a missing ~~#
+.nextp
+$tt DIM P% -2 $rm gives $tt Bad DIM$rm
+.endp
+.newpage
+$c _$bf Appendix 2: Version III improvements$rm_
+.blank 4
+.numberpars
+The deviant spelling $tt COLOR $rm is accepted for $tt COLOUR$rm
+.nextp
+$tt SAVE A~~$+B~~$ $rm will work correctly
+.nextp
+Use of ? and ! as formal parameters works correctly
+.nextp
+An "American" alternative is available which will list $tt COLOR $rm
+or $tt COLOUR $rm reserved words as $tt COLOR$rm . The English version will
+list $tt COLOR $rm or $tt COLOUR $rm as $tt COLOUR$rm. This is the ONLY
+(and thus the distinguishing) difference between the two alternatives.
+.endp
+.newpage
+$c _$bf Appendix 3: Version IV improvements$rm_
+.blank 4
+.numberpars
+Trailing spaces will always be stripped from lines entered into the interpreter
+.nextp
+Leading spaces will be stripped from lines entered into the interpreter when
+a non zero $tt LISTO $rm is set. The assumption is that there will be a
+formatted listing on screen when cursor editing is used when $tt LISTO $rm is
+non zero.
+.nextp
+$tt LISTO $rm gets indentation of loops "correct"
+.nextp
+Cross reference/Search output is available from $tt LIST$rm. Lines
+will be$tt LIST$rm ed $tt IF $rm the specified string is present:-
+.display
+    LIST IF DEF
+    LIST 10,1000 IF =
+    LIST ,2000 IF A%
+.endd
+Due to the lexical analysis it is not possible to search for $tt TIME=90 $rm
+as a statement, it will only be checked for as a boolean expression. $tt
+PTR~~#, HIMEM, PAGE, LOMEM $rm are similarly affected.
+.nextp
+Neither $tt RENUMBER $rm nor $tt LIST $rm will be confused by &8D in
+comments or strings. In addition $tt LIST $rm will not be confused by
+coloured comments.
+.nextp
+A statement to update an open files extent $tt EXT~~#chan=length $rm
+has been added. This uses OSARGS and works on suitable filing systems
+e.g. ADFS.
+.nextp
+A display real time clock psuedo variable $tt TIME~~$ $rm has been
+introduced. It fetches a fixed 24 byte string from the OS in response to
+$tt PRINT TIME~~$ $rm (or similar). The string looks like $ss
+Wed,31 Dec 1900.23:59:59$rm . Assigning to $tt TIME~~$="frerd" $rm merely
+passes the sring directly to the OS with the length in the first byte.
+.nextp
+$tt AUTO $rm no longer outputs a space after the line number.
+.nextp
+General recursion is now allowed in $tt FOR $rm loop set up statement e.g.
+.display
+DEF FNQ FORJ=1TO10:P.J;:N.:=10
+FORI=FNQ-9 TO FNQ STEP FNQ/10
+.endd
+now works. In previous versions only the first $tt FNQ $rm or $tt FNQ$rm 's
+without the $tt FOR $rm loop would work.
+.nextp
+A new command $tt EDIT $rm can be used to create an in core text file of the
+current program. It then issues the command $ss "*EDIT hh,hh" $rm where the
+hex addresses are the address in zero page of the start of the in core text
+and the address in zero page of the end of the in core text plus one. $tt
+LISTO 0 $rm is set before conversion begins. If there is not enough space to
+convert the entire file the error message No room will be given together with
+a line number which shows how far through the program it had got: at this
+stage either $tt CLEAR $rm or a different $tt EDIT $rm command should be
+used. ESCAPE will behave similarly, stopping the conversion to text.
+.nextp
+A new terminator | is available in $tt VDU$rm . It can appear after
+expressions and simply sends 9 zeroes to the vdu drivers. Thus one can say
+$tt VDU19,1,2|$rm
+.nextp
+The random number generator (rewritten in BASIC III to go faster) has now
+been changed in an incompatible fashion as far as the answers given by $tt
+RND(1) $rm and $tt RND(n) $rm n>1 are concerned. $tt RND $rm will give the
+same answers. The changes are to avoid statistical errors in certain
+circumstances.
+.nextp
+$tt ON <expression> PROCA,PROCB(1,2),PROCC( "fred" ) ELSE PROCD( "error" )
+$rm is now legal syntax. Please note that there is (and has always been) a
+bug in $tt ON#....#ELSE $rm <stmta>:<stmtb> in that with $tt GOSUB $rm (and
+now $tt PROC$rm ) everyone executes <stmtb>.
+.nextp
+The bug of $tt RESTORE$rm ing to a line without a $tt DATA $rm token on
+it bt with a "," has been removed.
+.endp

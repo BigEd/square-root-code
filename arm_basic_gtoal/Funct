@@ -1,0 +1,419 @@
+;> Funct
+FNTRC TST R5,#&80
+ BNE ESCAPE
+ TST R5,#&8000
+ MOVEQ PC,R14
+ LDR R5,[ARGP,#TRCNUM]
+ CMP R5,#0
+ MOVPL PC,R14
+ STMFD SP!,{R0,R4,R14}
+ TST R5,#TINTEGER
+ SWIEQ WRITEI+"["
+ SWINE WRITEI+"{"
+ TEQ R10,#TPROC
+ BNE FNTRC1
+ BL VSTRNG
+ = "PROC",0
+ B FNTRC2
+FNTRC1 BL VSTRNG
+ = "FN",0
+ ALIGN
+FNTRC2 MOV R0,R3
+ SWI WRITEC
+FNTRC3 TEQ R4,AELINE
+ BEQ FNTRC4
+ LDRB R0,[R4],#1
+ SWI WRITEC
+ B FNTRC3
+FNTRC4 TEQ R10,#TPROC
+ BL TRCEND
+ LDMFD SP!,{R0,R4,PC}
+TRCEND TST R5,#TINTEGER
+ SWIEQ WRITEI+"]"
+ SWINE WRITEI+"}"
+ SWI WRITEI+" "
+ SWINE READC
+ MOV PC,R14
+;search program section
+FNFIND LDRB R0,[R5,#1]
+ CMP R0,#&FF
+ MOVEQ PC,R14 ;run out of program section
+ ADD R2,R5,#4 ;first real section of line
+ LDRB R0,[R5,#3]
+ ADD R5,R5,R0 ;step R5 onto next line
+FNFINS LDRB R0,[R2],#1
+ CMP R0,#" "
+ BEQ FNFINS
+ CMP R0,#TDEF
+ BNE FNFIND ;no def, so around again
+FNDEFA LDRB R0,[R2],#1
+ CMP R0,#" "
+ BEQ FNDEFA ;multiple spaces between DEF and FN/PROC
+ TEQ R0,R10 ;found FN/PROC ?
+ LDREQB R0,[R2],#1
+ TEQEQ R0,R3 ;if we have, then is first char ok?
+ BNE FNFIND ;neither
+ MOV R7,R4
+FNDFLP LDRB R0,[R2],#1
+ TEQ R7,AELINE
+ BEQ FNDFEN ;list end
+ LDRB R6,[R7],#1
+ TEQ R6,R0
+ BEQ FNDFLP
+ B FNFIND
+FNDFEN MOV R6,R14
+ BL WORDCQ
+ MOVS R14,R6
+ BCS FNFIND ;next character was wordc so not finished
+ MOV PC,R14
+;Search for the function/procedure definition in all program sections
+FNDEF LDR R5,[ARGP,#PAGE]
+ BL FNFIND
+ BNE FNINSTANT
+ LDR R1,[ARGP,#LIBRARYLIST]
+ CMP R1,#0
+ BEQ FNDEF2
+FNDEF1 ADD R5,R1,#4
+ BL FNFIND
+ BNE FNINSTANT
+ LDR R1,[R1]
+ CMP R1,#0
+ BNE FNDEF1
+FNDEF2 LDR R1,[ARGP,#INSTALLLIST]
+ CMP R1,#0
+ BEQ FNMISS
+FNDEF3 ADD R5,R1,#4
+ BL FNFIND
+ BNE FNINSTANT
+ LDR R1,[R1]
+ CMP R1,#0
+ BNE FNDEF3
+ B FNMISS
+;have now found the function: now define it using R2.
+;create function/proc definition
+;list of formal paramters terminated by 0
+;list entry is actual address word followed by type word:
+;  high zero; n type to push; m RETURN; l type
+FNPAR1 LDRB R0,[R2],#1
+FNINSTANT CMP R0,#" "
+ BEQ FNPAR1
+ MOV R1,#0
+ CMP R0,#"("
+ SUBNE R2,R2,#1
+ STMFD SP!,{R1} ;limit stop for parameter list on stack
+ BNE FNPARZ
+ STMFD SP!,{R3,R4,AELINE,R10,LINE}
+ MOV AELINE,R2
+ MOV LINE,R2 ;for error
+FNPAR2 BL AESPAC
+ TEQ R10,#TRETURN
+ STMFD SP!,{R10}
+ BLEQ AESPAC
+ BL LVCONT
+ BNE FNPAR3
+ BCS FACERR
+ BL CREATE
+FNPAR3 CMP TYPE,#256
+ ORRCS TYPE,TYPE,#&48000 ;integer type for arg store for arrays and array type
+ ORRCC TYPE,TYPE,TYPE,LSL #16 ;type for arg store is current type
+FNPARC LDMFD SP!,{R4}
+ TEQ R4,#TRETURN
+ TSTEQ TYPE,#&100 ;make sure not an array
+ ORREQ TYPE,TYPE,#&500 ;indicate reference type
+ LDMFD SP!,{R2,R3,R4,R5,R6} ;get off interesting info
+ STMFD SP!,{FACC,TYPE} ;new stuff
+ STMFD SP!,{R2,R3,R4,R5,R6} ;info
+ BL AESPAC
+ TEQ R10,#","
+ BEQ FNPAR2
+ TEQ R10,#")"
+ BNE ERBRA
+ MOV R2,AELINE
+ LDMFD SP!,{R3,R4,AELINE,R10,LINE}
+FNPARZ STMFD SP!,{R2};save target line pointer
+ ADD R0,ARGP,#PROCPTR
+ TEQ R10,#TFN
+ ADDEQ R0,ARGP,#FNPTR
+ MOV TYPE,#0 ;don't let create do it
+ BL CREALP
+ ADD R2,R2,#3
+ BIC R2,R2,#3 ;word align pointer
+ LDMFD SP!,{R7} ;address
+ MOV FACC,R2 ;put info pointer in desired place
+ LDMFD SP!,{R4}
+ TEQ R4,#0
+ BEQ FNPARX
+ STMFD SP!,{R4}
+ MOV R1,SP
+FNPAR8 LDR R5,[R1],#8 ;find the end of the list up the stack
+ TEQ R5,#0
+ BNE FNPAR8
+ SUB R6,R1,#8
+FNPAR9 LDMEA R6!,{R4,R5}
+ STMEA R2!,{R4,R5} ;put r4,r5 onto parameter list
+ TEQ R6,SP
+ BNE FNPAR9
+ SUB SP,R1,#4
+ MOV R4,#0
+FNPARX STMFD SP!,{LINE,R10}
+ MOV LINE,R7
+ BL MUNGLE
+ STMEA R2!,{R4,LINE} ;put in final zero and address
+ LDMFD SP!,{LINE,R10}
+ ADD R2,R2,#3
+ BIC R2,R2,#3
+ STR R2,[ARGP,#FSA] ;update fsa!
+ B FNGOA
+FN LDR R1,[ARGP,#FNPTR] ;base for function lookup
+ STMFD SP!,{R14}
+FNBODY MOV R0,#0 ;must enter with R10=FN/PROC and R1 lookup base
+ STMFD SP!,{R0} ;push end-of-return info 0 (NO link RQD!)
+ LDRB R3,[AELINE],#1
+ MOV R4,AELINE ;R4 start of information after r3
+ CMP R3,#"z"
+ BHI FNCALL
+ CMP R3,#"_"
+ BCS FNMULTI
+ CMP R3,#"Z"
+ BHI FNCALL
+ CMP R3,#"@"
+ BCS FNMULTI
+ CMP R3,#"9"
+ BHI FNCALL
+ CMP R3,#"0"
+ BCC FNCALL
+FNMULTI LDRB R5,[AELINE],#1
+ CMP R5,#"z"
+ BHI FNMULE
+ CMP R5,#"_"
+ BCS FNMULTI
+ CMP R5,#"Z"
+ BHI FNMULE
+ CMP R5,#"@"
+ BCS FNMULTI
+ CMP R5,#"9"
+ BHI FNMULE
+ CMP R5,#"0"
+ BCS FNMULTI
+FNMULE SUB AELINE,AELINE,#1
+ LDR R5,[ARGP,#ESCWORD]
+ CMP R5,#0
+ BLNE FNTRC
+ BL LOOKP1 ;R1 preserved to here
+ BNE FNDEF
+ ADD FACC,FACC,#3
+ BIC FACC,FACC,#3 ;pointer to info (list, 0, addr)
+FNGOA LDRB R5,[AELINE],#1
+ CMP R5,#" "
+ BEQ FNGOA
+ CMP R5,#"("
+ BEQ FNARGS
+ SUB AELINE,AELINE,#1
+DOFN LDMIA FACC,{R4,R5} ;load r4,r5 from list
+ TEQ R4,#0
+ BNE ARGMAT ;argument mismatch
+ STMFD SP!,{R10,AELINE,LINE} ;push FN/PROC and state
+ MOV LINE,R5
+ B STMT
+FNARGS MOV R6,FACC ;save info pointer
+;first push the r v's of the formal parameters
+ MOV R5,FACC
+ LDMIA R5!,{FACC,TYPE}
+ TEQ FACC,#0
+ BEQ FNARG0
+FNARGT MOV TYPE,TYPE,LSR #16 ;get type to push
+ BL VARIND
+ BL PUSHTYPE
+ LDMIA R5!,{FACC,TYPE}
+ TEQ FACC,#0
+ BNE FNARGT
+FNARG0 ORR R14,R5,#&C0000000 ;end of parameter list
+ STMFD SP!,{R6} ;gsave beginning of parm list
+ STMFD SP!,{R5,R10,R14} ;local save of address, R10 (FN/PROC). gsave of r14
+;now read r v's of actual parameters onto stack (and l v's of any RETURNs)
+ MOV R7,R6 ;temporary save beginning of parm list
+FNARG1 LDMIA R6!,{R4,R5} ;get r4,r5 from block
+ TEQ R4,#0 ;find out what if at end of list
+ BEQ ARGMAT ;error if so
+ STMFD SP!,{R6,R7} ;save block pointer and info ptr
+ TST R5,#&100 ;special code needed for different types
+ BNE FNARGA ;array/RETURN
+ BL EXPR
+ LDMFD SP!,{R6,R7} ;recover saved block parm and info ptr
+ BL PUSHTYPE ;save rv
+ STMFD SP!,{TYPE} ;save type of rv
+ CMP R10,#","
+ BEQ FNARG1
+ CMP R10,#")" ;end of call list
+ LDR R5,[R6]
+ TEQEQ R5,#0 ;end of target list
+ BNE ARGMAT
+;then assign the rv's to the parms
+FNARGZ BL PULLTYPE
+ LDMEA R6!,{R4,R5} ;go backwards down the list of items
+ STMFD SP!,{R5,R6,R7}
+ MOV R5,R5,LSR #16 ;get store type
+ BL STOREA
+ LDMFD SP!,{R5,R6,R7}
+ CMP R6,R7
+ BNE FNARGZ
+ LDMFD SP!,{FACC,R10}
+ STMFD SP!,{R10,AELINE,LINE} ;push FN/PROC and state
+ LDR LINE,[FACC,#-4]
+ B STMT
+;now duplicate code which deals with calls with RETURN or ARRAYs
+FNHARDARG1 LDMIA R6!,{R4,R5} ;get r4,r5 from block
+ TEQ R4,#0 ;find out what if at end of list
+ BEQ ARGMAT ;error if so
+ STMFD SP!,{R6,R7} ;save block pointer and info ptr
+ TST R5,#&100 ;special code needed for different types
+ BNE FNARGA ;array/RETURN
+ BL EXPR
+ LDMFD SP!,{R6,R7} ;recover saved block parm and info ptr
+ BL PUSHTYPE ;save rv
+ STMFD SP!,{TYPE} ;save type of rv
+ B FNARG4
+FNARGA TST R5,#&8000
+ BEQ FNARGR
+ STMFD SP!,{R5}
+ BL LVBLNK
+ BEQ ARGMATARR
+ CMP TYPE,#256
+ BCC ARGMATARR
+ LDMFD SP!,{R7}
+ BIC R7,R7,#&FF000
+ CMP TYPE,R7
+ BNE ERSIZE
+ LDMFD SP!,{R6,R7} ;recover saved block parm and info ptr
+ LDR FACC,[FACC]
+ STMFD SP!,{FACC} ;save array pointer
+ MOV TYPE,#4
+ STMFD SP!,{TYPE} ;save type of array pointer (integer!)
+ B FNARG3
+FNARGR BL LVBLNK ;return type must be an lv
+ BNE FNARG2
+ BCS ARGMATRET
+ BL CREATE
+FNARG2 LDMFD SP!,{R6,R7} ;recover saved block parm and temp ptr
+ STMFD SP!,{FACC,TYPE} ;save lv
+ BL VARIND
+ BL PUSHTYPE ;save rv
+ STMFD SP!,{TYPE} ;save type of rv
+FNARG3 LDRB R10,[AELINE],#1
+ CMP R10,#" "
+ BEQ FNARG3
+FNARG4 CMP R10,#","
+ BEQ FNHARDARG1
+ CMP R10,#")" ;end of call list
+ LDR R5,[R6]
+ TEQEQ R5,#0 ;end of target list
+ BNE ARGMAT
+;then assign the rv's to the parms
+ SUB R10,SP,#256 ;pointer to temporary stack
+FNHARDARGZ BL PULLTYPE
+ LDMEA R6!,{R4,R5} ;go backwards down the list of items
+ STMFD SP!,{R5,R6,R7}
+ MOV R5,R5,LSR #16 ;get store type
+ BL STOREA
+ LDMFD SP!,{R5,R6,R7}
+ TST R5,#&400 ;RETURN parameter on stack?
+ LDMNEFD SP!,{R4,R5} ;transfer to
+ STMNEIA R10!,{R4,R5} ;temporary stack
+ CMP R6,R7
+ BNE FNHARDARGZ
+ LDMFD SP!,{FACC,R10}
+ SUB FACC,FACC,#8
+ B DOFN
+FNRET BL AEEXPR
+ BL AEDONE
+FNRETA LDMFD SP!,{R4}
+ CMP R4,#TFN
+ BNE FNRETP
+ BL GTARGS
+ TEQ TYPE,#0
+ LDMFD SP!,{PC}
+FNRETP SUB SP,SP,#4
+ BL POPA
+ BEQ FNRETA
+ B ERRFN
+GTARGS LDMFD SP!,{AELINE,LINE}
+ LDMFD SP!,{R4}
+ TEQ R4,#0
+ MOVEQ PC,R14 ;no args to replace
+;R4,5,6,7,8 and 10 are the only free registers!
+ MOV R10,R14 ;save link reg
+ CMP R4,#&C0000000
+ BCS GTARGP ;get parms
+GTARGL MOV R6,R4 ;LOCALS!
+ LDMFD SP!,{R7}
+ BL RETSTK
+ MOV ARGP,#VARS
+ LDMFD SP!,{R4}
+ TEQ R4,#0
+ MOVEQ PC,R10 ;no ARGS
+ CMP R4,#&C0000000
+ BCC GTARGL
+GTARGP BIC R4,R4,#&C0000000 ;extract address of end of parm list
+ LDMFD SP!,{R5} ;start of parm list
+ SUB R4,R4,#8
+GTARP1 LDMEA R4!,{R6,R7} ;get l value of parm: addr R6, type R7
+ MOV R7,R7,LSR #16
+ BL RETSTK
+ CMP R4,R5
+ BNE GTARP1
+ MOV ARGP,#VARS
+ LDMFD SP!,{R4}
+ TEQ R4,#0
+ MOVEQ PC,R10
+ B ERRQ1
+;return item type in r7, address in r6
+RETSTK CMP R7,#5
+ BEQ RETFP
+ BCS RETSTR
+ CMP R7,#4
+ LDMFD SP!,{R7}
+ BEQ RETWOR
+ STRB R7,[R6]
+ MOV PC,R14
+RETFP LDMFD SP!,{R7,R8}
+ STRB R8,[R6,#4]
+ BIC R7,R7,#&80000000
+ AND R8,R8,#&80000000
+ ORR R7,R7,R8
+RETWOR STRB R7,[R6]
+ MOV R7,R7,ROR #8
+ STRB R7,[R6,#1]
+ MOV R7,R7,ROR #8
+ STRB R7,[R6,#2]
+ MOV R7,R7,ROR #8
+ STRB R7,[R6,#3]
+ MOV PC,R14
+RETSTR CMP R7,#128
+ BNE RETROP
+ STMFD SP!,{R0-R5,R14}
+ ADD R3,SP,#7*4 ;number of registers pushed
+ LDMFD R3!,{CLEN}
+ MOV ARGP,#VARS
+ ADD R4,ARGP,#STRACC
+ SUB CLEN,CLEN,R4
+ ADD CLEN,CLEN,R3
+ MOV R4,R6
+ BL STSTORE
+ ADD R7,CLEN,#3
+ LDMFD SP!,{R0-R5,R14}
+ BIC SP,R7,#3
+ MOV PC,R14
+RETROP LDMFD SP!,{R7}
+ SUB R7,R7,#VARS
+ SUBS R7,R7,#STRACC
+ BEQ RETRPN
+RETRP1 LDRB R8,[SP],#1
+ STRB R8,[R6],#1
+ SUBS R7,R7,#1
+ BNE RETRP1
+ ADD SP,SP,#3
+ BIC SP,SP,#3
+RETRPN MOV R7,#13
+ STRB R7,[R6]
+ MOV PC,R14
+ LNK Fp

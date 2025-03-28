@@ -1,0 +1,826 @@
+;> Expr
+;lookup takes r10=1st char, r3=2nd char, r4=start of rest, aeline=end
+;returns with facc at dataitem if eq else neq
+LOOKUP SUB R1,R10,#"@"
+ LDR R1,[ARGP,R1,LSL #2] ;base from VARPTR array
+ MOVS R0,R1
+ BNE LOOKP1A
+LOOKFL TEQ R1,#1
+ MOV PC,R14 ;ne
+LOOKPY TEQ R4,AELINE
+ SUBEQ R0,R0,#2
+ MOVEQ PC,R14
+LOOKP1 MOVS R0,R1 ;move pointer, end of list?
+ BEQ LOOKFL
+LOOKP1A LDMIA R0!,{R1,R5} ;link to next field and first 2 characters
+ MOV R5,R5,ROR #8
+ TEQ R3,R5,LSR #24 ;is it the same?
+ BNE LOOKP1 ;no, so try next field
+ ANDS R5,R5,#&FF ;end of entry?
+ BEQ LOOKPY
+ TEQ R4,AELINE ;end of variable?
+ BEQ LOOKP1
+ LDRB R6,[R4] ;2nd char matches?
+ TEQ R6,R5
+ BNE LOOKP1
+ MOV R2,R4 ;set start pointer
+ SUB R0,R0,#2
+LOOKP2 LDRB R6,[R2,#1]!
+ LDRB R5,[R0],#1
+ TEQ R6,R5
+ BEQ LOOKP2
+ TEQ R5,#0
+ BNE LOOKP1
+ TEQ R2,AELINE
+ BNE LOOKP1
+ MOV PC,R14
+;create a variable. Input is the failure of lv to find something. Thus we have
+;R10=first char of item, R3=second char of item or 0, R4..AELINE other chars
+;TYPE contains the number of zero bytes on the end
+;result ne, cc, cs as lv
+CREATE SUB R0,R10,#"@"
+ ADD R0,ARGP,R0,LSL #2 ;VARPTR Array
+CREALP LDR R1,[R0] ;first find the list end
+ TEQ R1,#0
+ MOVNE R0,R1 ;not end, continue
+ BNE CREALP
+ LDR R2,[ARGP,#FSA]
+ SUB R1,AELINE,R4
+ ADD R1,R1,TYPE
+ ADD R1,R1,R2
+ ADD R1,R1,#512 ;length+no zeroes+fsa
+ CMP R1,SP
+ BCS ALLOCR
+ STR R2,[R0] ;update list entry
+ MOV R1,#0
+ STR R1,[R2],#4 ;null pointer on new end
+ STRB R3,[R2],#1 ;second character or 0
+ TEQ R3,#0
+ BEQ CREAND ;early finish
+ MOV R3,R4
+CREANM TEQ R3,AELINE
+ LDRNEB R5,[R3],#1
+ STRNEB R5,[R2],#1
+ BNE CREANM
+ STRB R1,[R2],#1 ;final zero byte
+CREAND STMFD SP!,{TYPE}
+ CMP TYPE,#256
+ MOVCS TYPE,#4 ;ref arrays are integers
+ ADDCS AELINE,AELINE,#1 ;and need an extra character to be ignored
+ TEQ TYPE,#4 ;word align if integer
+ ADDEQ R2,R2,#3
+ BICEQ R2,R2,#3
+ STMFD SP!,{R2}
+ TEQ TYPE,#128
+ MOVEQ TYPE,#5 ;strings have only 5 bytes in them
+ TEQ TYPE,#0 ;put in bytes of zero
+CREZER STRNEB R1,[R2],#1
+ SUBNES TYPE,TYPE,#1
+ BNE CREZER
+ ADD R2,R2,#3
+ BIC R2,R2,#3
+ STR R2,[ARGP,#FSA]
+ LDMFD SP!,{FACC,TYPE}
+ TEQ TYPE,#225 ;ne status
+ MOV PC,R14
+CRAELV STMFD SP!,{R14}
+ BL AELV
+ LDMNEFD SP!,{PC}
+ LDMCSFD SP!,{PC} ;return if ne or cs
+ BL CREATE
+ LDMFD SP!,{PC}
+LVTABLE = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,128,4,5,5,5,5,5,5,5,5,5,5
+ = 0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5
+ = 5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+ = 0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,0
+ = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+ = 0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+ = 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+AELV MOV AELINE,LINE
+LVBLNK LDRB R10,[AELINE],#1
+ CMP R10,#" "
+ BEQ LVBLNK
+;LV reads the l value of the current item if possible.
+
+;If LV reads an l value FACC will be the address of the data byte(s) {or string
+;control block} and there will be an NEQ status
+;TYPE will be 0 for byte, 4 for integer and 5 for a floating point variable
+;TYPE will be 129 for $<factor> and 128 for ordinary strings.
+;If it is a reference to an array then TYPE will be 256+ expected value.
+
+;If there is an EQ status then if the carry is set it is silly else if the
+;carry is clear it is not in the list.
+
+LVCONT SUBS R1,R10,#"@" ;renorm for varptr array reference
+ BLS LVFD ;probably not an lv but check for unary things and @%
+;this test also removes numeric first characters
+ MOV R4,AELINE
+ ADR R3,LVTABLE
+ LDRB TYPE,[R3,R10]
+ CMP TYPE,#0
+ BNE LVFLOATIND
+MULTI LDRB R5,[AELINE],#1
+ LDRB TYPE,[R3,R5]
+ CMP TYPE,#0
+ BEQ MULTI
+ CMP TYPE,#5
+ LDRNEB R5,[AELINE],#1
+ CMP R5,#"("
+ BEQ BKTVAR
+BKTVE SUB AELINE,AELINE,#1
+ LDR R1,[ARGP,R1,LSL #2] ;base from VARPTR array
+ EORS R3,R4,AELINE ;No more chars? :provides 0 in R3 for single char create
+ BEQ LOOKU5 ;Branch if no more
+ LDRB R3,[R4],#1 ;if more chars R3 is next char
+ CMP R10,#"Z"+1
+ CMPCC R3,#"%"
+ BEQ LVSTATICINT
+LOOKU1 MOVS R0,R1 ;pointer in different register
+ BEQ LVNTFN ;end of list
+ LDMIA R0!,{R1,R5} ;R1=link to next field, R5=first 4 characters
+ MOV R5,R5,ROR #8 ;Move first character to top of R5
+ TEQ R3,R5,LSR #24 ;Do quick check on first character
+ BNE LOOKU1
+ TEQ R4,AELINE
+ BEQ LOOKA2 ;Branch if run out of length
+ MOV R6,R4
+LOOKU2 MOV R5,R5,ROR #8 ;Move current character to top of R5
+ LDRB R2,[R6],#1 ;Get variable character
+ TEQ R2,R5,LSR #24 ;Unless equal, give up
+ BNE LOOKU1
+ TEQ R6,AELINE ;Branch if run out of length
+ BEQ LOOKA1
+ MOV R5,R5,ROR #8 ;Move current character to top of R5
+ LDRB R2,[R6],#1 ;Get variable character
+ TEQ R2,R5,LSR #24 ;Unless equal, give up
+ BNE LOOKU1
+ TEQ R6,AELINE ;Branch if run out of length
+ BEQ LOOKA0
+ MOV R5,R5,ROR #8 ;Move current character to top of R5
+ LDRB R2,[R6],#1 ;Get variable character
+ TEQ R2,R5,LSR #24 ;Unless equal, give up
+ BNE LOOKU1
+ LDR R5,[R0],#4 ;Get next word of list entry
+ TEQ R6,AELINE ;Branch if run out of length
+ BEQ LOOKA3
+ MOV R5,R5,ROR #8 ;Move current character to top of R5
+ LDRB R2,[R6],#1 ;Get variable character
+ TEQ R2,R5,LSR #24 ;Unless equal, give up
+ BNE LOOKU1
+ TEQ R6,AELINE ;Loop if not run out of length
+ BNE LOOKU2
+ SUB R0,R0,#2
+LOOKA0 ADD R0,R0,#1 ;adjust by 0
+LOOKA1 ADD R0,R0,#1 ;adjust by -1
+LOOKA2 ADD R0,R0,#1 ;adjust by -2
+LOOKA3 TST R5,#&FF ;Check list entry has ended
+ BNE LOOKU1 ;Otherwise loop
+ TEQ TYPE,#4 ;found
+ SUBNE R0,R0,#3 ;adjust by -3 but add 3 if type=4
+ BICEQ R0,R0,#3 ;final part of word align if type=4
+ B CHKQUE
+LOOKU5 MOVS R0,R1 ;pointer in different register
+ BEQ LVNTFN ;end of list
+ LDMIA R0!,{R1,R5} ;R1=link to next field, R5=first 4 characters
+ TST R5,#&FF ;Is this the correct entry?
+ BNE LOOKU5 ;Loop if not
+ TEQ TYPE,#4
+ SUBNE R0,R0,#3 ;adjust by -3
+CHKQUE LDRB R10,[AELINE]
+ TEQ R10,#"!"
+ BEQ BIPLIN
+ EORS R1,R10,#"?"
+ MOVNE PC,R14 ;ne status
+ B BIQUER
+LVSTATICINT ADD FACC,ARGP,#INTVAR
+ SUB R1,R10,#"@"
+ ADD FACC,FACC,R1,LSL #2
+ B CHKQUE
+LVFLOATIND CMP R10,#"|"
+ BNE LVFD
+ MOV R1,#5
+ B UNQUER
+LVNTFN ADDS R0,R0,#0
+ TEQ R0,R0
+ MOV PC,R14 ;eq, cc
+BIPLIN MOV R1,#4
+BIQUER STMFD SP!,{R1,R14}
+ ADD AELINE,AELINE,#1
+ BL VARIND
+ BL INTEGY
+ STMFD SP!,{FACC}
+ BL FACTOR
+ BL INTEGZ
+ LDMFD SP!,{R1}
+ ADD FACC,FACC,R1
+ LDMFD SP!,{TYPE,R14}
+ CMP TYPE,#6 ;ne status
+ MOV PC,R14
+LVFDAT LDRB R5,[AELINE],#1
+ CMP R5,#"%"
+ BNE LVFDC1
+ LDRB R0,[AELINE]
+ CMP R0,#"("
+ BEQ LVFDC1
+ MOV TYPE,#4 ;built in integer
+ ADD FACC,ARGP,#INTVAR
+ B CHKQUE
+LVFD BEQ LVFDAT
+ CMP R10,#"!"
+ BEQ UNPLIN
+ MOV R1,#129
+ CMP R10,#"$"
+ BEQ UNQUER
+ EORS R1,R10,#"?"
+ BEQ UNQUER
+LVFDC CMP R10,R10
+ MOV PC,R14 ;eq,cs
+LVFDC1 SUB AELINE,AELINE,#1
+ CMP R10,R10
+ MOV PC,R14
+UNPLIN MOV R1,#4
+UNQUER STMFD SP!,{R1,R14}
+ BL FACTOR
+ BL INTEGZ
+ LDMFD SP!,{TYPE,R14}
+ CMP TYPE,#6 ;ne status
+ MOV PC,R14
+BKTVAR LDRB R3,[R4],#1
+ LDR R1,[ARGP,R1,LSL #2] ;base from VARPTR array
+ARLOOKP1 MOVS R0,R1 ;move pointer, end of list?
+ BEQ ARNOTFOUND
+ LDMIA R0!,{R1,R5} ;link to next field and first 2 characters
+ MOV R5,R5,ROR #8
+ TEQ R3,R5,LSR #24 ;is it the same?
+ BNE ARLOOKP1 ;no, so try next field
+ ANDS R5,R5,#&FF ;end of entry?
+ BEQ ARLOOKPY
+ TEQ R4,AELINE ;end of variable?
+ BEQ ARLOOKP1
+ LDRB R6,[R4] ;2nd char matches?
+ TEQ R6,R5
+ BNE ARLOOKP1
+ MOV R2,R4 ;set start pointer
+ SUB R0,R0,#2
+ARLOOKP2 LDRB R6,[R2,#1]!
+ LDRB R5,[R0],#1
+ TEQ R6,R5
+ BEQ ARLOOKP2
+ TEQ R5,#0
+ BNE ARLOOKP1
+ TEQ R2,AELINE
+ BNE ARLOOKP1
+ B ARLOOKPZ
+ARNOTFOUND LDRB R0,[AELINE]
+ CMP R0,#")"
+ BNE ERARRY
+ ORR TYPE,TYPE,#256
+ B LVNTFN
+ARLOOKPY TEQ R4,AELINE
+ BNE ARLOOKP1 ;no need to SUB R0,R0,#2 because of next word align
+ARLOOKPZ ADD FACC,FACC,#3
+ BIC FACC,FACC,#3
+ LDRB R1,[AELINE]
+ CMP R1,#")"
+ BEQ ARRAYREF
+ LDR FACC,[FACC]
+ CMP FACC,#16
+ BCC ERARRZ
+ STMFD SP!,{FACC,TYPE,R14}
+ BL EXPR
+ BL INTEGZ
+ LDMFD SP!,{R4} ;pull address of limit list
+ LDR R3,[R4],#4 ;get first limit
+ CMP FACC,R3
+ BCS ERRSUB
+ CMP R10,#")"
+ BEQ ARREND
+ CMP R10,#","
+ BNE ERBRA
+ MOV R5,#0
+ARLOP ADD FACC,R5,FACC ;add expr to acc
+ LDR R6,[R4] ;multiply by next limit
+ [ RRX=1
+ MUL R5,R6,FACC
+ |
+ MOV R5,#0
+ARMUL1 MOVS R6,R6,LSR #1
+ ADDCS R5,R5,FACC
+ ADD FACC,FACC,FACC
+ BNE ARMUL1
+ ]
+ STMFD SP!,{R4,R5}
+ BL EXPR
+ BL INTEGZ
+ LDMFD SP!,{R4,R5}
+ LDR R3,[R4],#4
+ CMP FACC,R3
+ BCS ERRSUB
+ CMP R10,#","
+ BEQ ARLOP
+ ADD R5,R5,FACC
+ CMP R10,#")"
+ BNE ERBRA
+ MOV FACC,R5
+ARREND LDR R3,[R4],#8 ;step past number of entries
+ TEQ R3,#0
+ BNE ERRSB2
+ MOV R1,FACC,LSL #2 ;multiply by 4
+ LDMFD SP!,{TYPE,R14}
+ CMP TYPE,#5
+ ADDCS R1,R1,FACC ;multiply by 5 for type=5 and 128
+ ADD FACC,R1,R4
+ LDRB R10,[AELINE]
+ TEQ R10,#"!"
+ BEQ BIPLIN
+ EORS R1,R10,#"?"
+ MOVNE PC,R14 ;ne status
+ B BIQUER
+ARRAYREF ORRS TYPE,TYPE,#256
+ ADD AELINE,AELINE,#1
+ MOV PC,R14
+PUSHTYPE TEQ TYPE,#0
+ BMI FPUSH
+ STMNEFD SP!,{FACC}
+ MOVNE PC,R14
+;push string to stack. Uses r0,r1,clen,r3,r4
+SPUSH ADD R0,ARGP,#STRACC
+ SUBS R1,CLEN,R0
+ BEQ SPUSHX
+ ADD R1,R1,#3
+ BIC R1,R1,#3
+ SUB SP,SP,R1
+ MOV R3,SP
+SPUSHL LDR R4,[R0],#4
+ STR R4,[R3],#4
+ SUBS R1,R1,#4
+ BNE SPUSHL
+SPUSHX STMFD SP!,{CLEN}
+ MOV PC,R14
+FPUSH ORR FGRD,FSIGN,FACCX
+ STMFD SP!,{FACC,FGRD}
+ MOV PC,R14
+PULLTYPE LDMFD SP!,{TYPE}
+ TEQ TYPE,#0
+ BMI FPULL
+ LDMNEFD SP!,{FACC}
+ MOVNE PC,R14
+SPULL LDMFD SP!,{CLEN}
+ ADD R0,ARGP,#STRACC
+ SUBS R1,CLEN,R0
+ MOVEQ PC,R14 ;return quickly if zero length string
+ ADD R1,R1,#3
+ BIC R1,R1,#3
+SPULLL LDR R3,[SP],#4
+ STR R3,[R0],#4
+ SUBS R1,R1,#4
+ BNE SPULLL
+ MOV PC,R14
+;load fp acc from stack. Zero test
+FPULL LDMFD SP!,{FACC,FACCX}
+ AND FSIGN,FACCX,#&80000000
+ AND FACCX,FACCX,#255
+ TEQ FACC,#0
+ MOV PC,R14
+DIVOP STMFD SP!,{R14}
+ BL INTEGY
+ STMFD SP!,{FACC}
+ BL POWER
+ BL INTEGY
+ LDMFD SP!,{FWACC,R14}
+;integer divide fwacc by facc; div result in facc, mod result in fwacc
+;uses r1,r2,r3,r5
+INTDIV EOR FSIGN,FACC,FWACC ;result sign for DIV
+ MOVS FWSIGN,FWACC ;result sign for REM
+ RSBMI FWACC,FWACC,#0
+ MOVS FGRD,FACC
+ BEQ ZDIVOR
+ RSBMI FGRD,FGRD,#0
+ MOV FWGRD,FGRD
+ MOV FACC,#0
+ CMP FWGRD,FWACC,LSR #1
+DIVJUS MOVLS FWGRD,FWGRD,LSL #1
+ CMPLS FWGRD,FWACC,LSR #1
+ BLS DIVJUS
+DIVER CMP FWACC,FWGRD
+ SUBCS FWACC,FWACC,FWGRD
+ ADC FACC,FACC,FACC
+ MOV FWGRD,FWGRD,LSR #1
+ CMP FWGRD,FGRD
+ BCS DIVER
+ TEQ FSIGN,#0
+ RSBMI FACC,FACC,#0
+ TEQ FWSIGN,#0
+ RSBMI FWACC,FWACC,#0
+ MOV PC,R14
+COMPR TEQ TYPE,#0
+ BEQ STNCMP
+ BMI FCOMPR
+ STMFD SP!,{R14,FACC}
+ BL ADDER
+ TEQ TYPE,#0
+ BEQ ERTYPEINT
+ BMI FCOMPS
+ LDMFD SP!,{R14,FACCX}
+ CMP FACCX,FACC
+COMPRX MVN FACC,#0 ;initial TRUE
+ MOV PC,R14
+FCOMPS LDMFD SP!,{FWACC}
+ STMFD SP!,{FACC,FACCX,FSIGN}
+ MOV FACC,FWACC
+ BL IFLT
+ BL FTOW
+ LDMFD SP!,{FACC,FACCX,FSIGN,R14}
+ B FCOMPT
+FCOMPR STMFD SP!,{R14,FACC,FACCX,FSIGN}
+ BL ADDER
+ TEQ TYPE,#0
+ BLPL FLOATQ
+ LDMFD SP!,{FWACC,FWACCX,FWSIGN,R14} ;get first
+FCOMPT MOV TYPE,#TINTEGER
+ CMP FWSIGN,FSIGN ;only top bits may be set!
+ BNE COMPRX ;easy
+ TEQ FSIGN,#0
+ BMI FCMPNE
+ CMP FWACCX,FACCX
+ CMPEQ FWACC,FACC
+ MVN FACC,#0
+ MOV PC,R14
+FCMPNE CMP FACCX,FWACCX
+ CMPEQ FACC,FWACC
+ MVN FACC,#0
+ MOV PC,R14
+STNCMP STMFD SP!,{R14}
+ BL SPUSH
+ BL ADDER
+ TEQ TYPE,#0
+ BNE ERTYPESTR
+ LDMFD SP!,{R0}
+ MOV TYPE,CLEN
+ CMP CLEN,R0
+ MOVCS CLEN,R0 ;clen becomes shortest length
+ ADD R1,ARGP,#STRACC
+ SUB R3,R0,R1
+ ADD R3,R3,#3
+ BIC R3,R3,#3
+ MOV R5,SP
+COMPRG CMP CLEN,R1
+ BEQ COMPRH
+ LDRB R6,[R1],#1
+ LDRB R7,[R5],#1 ;first string
+ CMP R7,R6
+ BEQ COMPRG
+COMPRH CMPEQ R0,TYPE ;skip if fall through
+ ADD SP,SP,R3
+ MVN R0,#0
+ MOV TYPE,#TINTEGER
+ LDMFD SP!,{PC}
+;Expr reads a right hand side with AELINE. If status eq it read a string
+;if status NE and plus it read an integer word (IN FACC)
+;if status NE and minus it read fp
+;TYPE contains the type. It can be examined by TEQ TYPE,#0
+;R10 contains the next character, which has been read (unlike 6502 one)
+AEEXPR MOV AELINE,LINE
+EXPR MOV R5,R14 ;save link
+ BL RELATE
+EXPRA1 CMP R10,#TAND
+ BEQ EXPRA2
+EXPRQ CMP R10,#TOR
+ TEQCC R10,#TEOR
+ BEQ ORA
+ TEQ TYPE,#0
+ MOV PC,R5
+EXPRA2 BL INTEGY
+ STMFD SP!,{FACC}
+ BL RELATE
+ BL INTEGY
+ LDMFD SP!,{FACCX}
+ AND FACC,FACCX,FACC
+ B EXPRA1
+ORA BCC EOR
+ BL ANDER
+ ORR FACC,FACCX,FACC
+ B EXPRQ
+EOR BL ANDER
+ EOR FACC,FACCX,FACC
+ B EXPRQ
+ANDER MOV R6,R14 ;save link
+ BL INTEGY
+ STMFD SP!,{FACC}
+ BL RELATE
+ANDERQ BL INTEGY
+ CMP R10,#TAND
+ LDMNEFD SP!,{FACCX}
+ MOVNE PC,R6
+ STMFD SP!,{FACC}
+ BL RELATE
+ BL INTEGY
+ LDMFD SP!,{FACCX}
+ AND FACC,FACCX,FACC
+ B ANDERQ
+RELATE STMFD SP!,{R5,R6,R14}
+ BL TERM
+ CMP R10,#"-"
+ TEQCC R10,#"+"
+ BLEQ ADDER1
+ CMP R10,#"<"
+ LDMCCFD SP!,{R5,R6,PC}
+ BEQ RELTLT
+ CMP R10,#">"
+ LDMHIFD SP!,{R5,R6,PC}
+ BEQ RELTGT
+ BL COMPR ;test =
+ LDMEQFD SP!,{R5,R6,PC} ;success
+FAIL MOV FACC,#0
+ LDMFD SP!,{R5,R6,PC}
+RELTLT LDRB R10,[AELINE],#1
+ CMP R10,#"="
+ BEQ LTOREQ
+ CMP R10,#">"
+ BEQ NEQUAL
+ CMP R10,#"<"
+ BEQ LSHIFT
+ SUB AELINE,AELINE,#1
+ BL COMPR
+ LDMLTFD SP!,{R5,R6,PC} ;test for less than
+ B FAIL
+LSHIFT BL INTEGY
+ STMFD SP!,{FACC}
+ BL ADDER
+ BL INTEGY
+ LDMFD SP!,{R1}
+ MOV FACC,R1,LSL FACC
+ LDMFD SP!,{R5,R6,PC}
+RSHIFT BL INTEGY
+ STMFD SP!,{FACC}
+ LDRB R10,[AELINE],#1
+ CMP R10,#">"
+ BEQ RSHIFTLOGICAL
+ SUB AELINE,AELINE,#1
+ BL ADDER
+ BL INTEGY
+ LDMFD SP!,{R1}
+ MOV FACC,R1,ASR FACC
+ LDMFD SP!,{R5,R6,PC}
+RSHIFTLOGICAL BL ADDER
+ BL INTEGY
+ LDMFD SP!,{R1}
+ MOV FACC,R1,LSR FACC
+ LDMFD SP!,{R5,R6,PC}
+LTOREQ BL COMPR
+ LDMLEFD SP!,{R5,R6,PC} ;test for less than or equal
+ B FAIL
+NEQUAL BL COMPR
+ LDMNEFD SP!,{R5,R6,PC}
+ B FAIL
+RELTGT LDRB R10,[AELINE],#1
+ CMP R10,#"="
+ BEQ GTOREQ
+ CMP R10,#">"
+ BEQ RSHIFT
+ SUB AELINE,AELINE,#1
+ BL COMPR
+ LDMGTFD SP!,{R5,R6,PC} ;test for greater than
+ B FAIL
+GTOREQ BL COMPR
+ LDMGEFD SP!,{R5,R6,PC}
+ B FAIL
+ADDER STMFD SP!,{R14}
+ BL TERM
+ADDERQ CMP R10,#"-"
+ TEQCC R10,#"+"
+ LDMNEFD SP!,{PC}
+ BCC PLUS
+MINUS TEQ TYPE,#0
+ BEQ ERTYPEINT
+ BMI FMINUS
+ STMFD SP!,{FACC}
+ BL TERM
+ TEQ TYPE,#0
+ BEQ ERTYPEINT
+ BMI FMINUT
+ LDMFD SP!,{FACCX}
+ SUB FACC,FACCX,FACC
+ B ADDERQ
+FMINUT TEQ FACC,#0
+ EORNE FSIGN,FSIGN,#&80000000
+ B FPLUST
+FMINUS STMFD SP!,{FACC,FACCX,FSIGN}
+ BL TERM
+ BL FLOATY
+ TEQ FACC,#0
+ EORNE FSIGN,FSIGN,#&80000000
+ B FPLUSS
+ADDER1 STMFD SP!,{R14}
+ BCS MINUS
+PLUS TEQ TYPE,#0
+ BEQ STNCON
+ BMI FPLUS
+ STMFD SP!,{FACC}
+ BL TERM
+ TEQ TYPE,#0
+ BEQ ERTYPEINT
+ BMI FPLUST
+ LDMFD SP!,{FACCX}
+ ADD FACC,FACC,FACCX
+ B ADDERQ
+FPLUST LDMFD SP!,{FWACC}
+ STMFD SP!,{FACC,FACCX,FSIGN}
+ MOV FACC,FWACC
+ BL IFLT ;no need to change type
+ B FPLUSS
+FPLUS STMFD SP!,{FACC,FACCX,FSIGN}
+ BL TERM
+ BL FLOATY
+FPLUSS LDMFD SP!,{FWACC,FWACCX,FWSIGN}
+ TEQ FWACC,#0
+ BLNE FADDW
+ B ADDERQ
+STNCON BL SPUSH
+ BL TERM
+ TEQ TYPE,#0
+ BNE ERTYPESTR
+;concatenate string on stack before string in buffer
+ LDMFD SP!,{R7} ;get length of other string
+ ADD R3,ARGP,#STRACC
+ SUBS R7,R7,R3
+ BEQ ADDERQ ;if first string empty then done
+ ADD R6,R7,CLEN ;total length
+ ADD R4,R3,#256
+ CMP R6,R4
+ BCS ERLONG
+ MOV R4,R6
+STNCMV CMP CLEN,R3
+ BEQ STNCPL
+ LDRB R0,[CLEN,#-1]! ;move second string to end of stracc
+ STRB R0,[R4,#-1]!
+ B STNCMV
+STNCPL SUBS R7,R7,#4
+ BCC STNCPP ;less than a word to pull
+ LDR R0,[SP],#4
+ STR R0,[R3],#4
+ B STNCPL
+STNCPP MOV CLEN,R6 ;total length
+ CMN R7,#4
+ BEQ ADDERQ ;no fractional word
+ LDR R0,[SP],#4 ;last word of all
+ STRB R0,[R3],#1
+ CMN R7,#3
+ BEQ ADDERQ
+ MOV R0,R0,LSR #8
+ STRB R0,[R3],#1
+ CMN R7,#2
+ BEQ ADDERQ
+ MOV R0,R0,LSR #8
+ STRB R0,[R3],#1
+ B ADDERQ ;must be this last one
+TERM STMFD SP!,{R14}
+ BL FACTOR
+TERMA LDRB R10,[AELINE],#1
+ CMP R10,#" "
+ BEQ TERMA
+ CMP R10,#"^"
+ BLEQ POWER1
+TERMQ CMP R10,#"/"
+ TEQCC R10,#"*"
+ BEQ TIMES
+ CMP R10,#TMOD
+ TEQCC R10,#TDIV
+ LDMNEFD SP!,{PC}
+ BCS REMAIN
+ BL DIVOP
+ B TERMQ
+REMAIN BL DIVOP
+ MOV FACC,FWACC
+ B TERMQ
+DIVIDE BL FLOATY
+ BL FPUSH
+ BL POWER
+ BL FLOATY
+ MOV TYPE,SP
+ BL FXDIV
+ PULLJ 2
+ MOV TYPE,#TFP
+ B TERMQ
+TIMES BCS DIVIDE
+ TEQ TYPE,#0
+ BEQ ERTYPEINT
+ BMI FTIME
+ CMP FACC,#32768
+ BGE FTIMF
+ CMN FACC,#32768
+ BLE FTIMF
+ STMFD SP!,{FACC}
+ BL POWER
+ TEQ TYPE,#0
+ BEQ ERTYPEINT
+ BMI FTIMET
+ CMP FACC,#32768
+ BGE FTIMEL
+ CMN FACC,#32768
+ BLE FTIMEL
+ LDMFD SP!,{FWACC}
+ [ RRX=1
+ MUL FACC,FWACC,FACC
+ B TERMQ
+ |
+ EOR FSIGN,FACC,FWACC ;final sign
+ MOVS FGRD,FACC
+ RSBMI FGRD,FGRD,#0
+ MOVS FWACC,FWACC
+ RSBMI FWACC,FWACC,#0
+ MOV FACC,#0
+NUL MOVS FWACC,FWACC,LSR #1
+ ADDCS FACC,FACC,FGRD
+ MOV FGRD,FGRD,LSL #1
+ BNE NUL
+ TEQ FSIGN,#0
+ RSBMI FACC,FACC,#0
+ B TERMQ
+ ]
+FTIMEL BL FLOATB
+FTIMET LDMFD SP!,{FWACC}
+ BL FPUSH
+ MOV FACC,FWACC
+ BL IFLT
+ B FTIMES
+FTIMF BL IFLT
+FTIME BL FPUSH
+ BL POWER
+ BL FLOATY
+FTIMES MOV TYPE,SP
+ BL FMUL
+ PULLJ 2
+ MOV TYPE,#TFP
+ B TERMQ
+POWER1 STMFD SP!,{R14}
+ B POWER2
+POWER STMFD SP!,{R14}
+ BL FACTOR
+POWERA LDRB R10,[AELINE],#1
+ CMP R10,#" "
+ BEQ POWERA
+ CMP R10,#"^"
+ LDMNEFD SP!,{PC}
+POWER2 BL FLOATY
+ BL FPUSH
+ BL FACTOR
+ BEQ ERTYPEINT
+ BPL INTPOW
+ CMP FACCX,#&87
+ BCS FPOWA ;abs(n)>=64
+ BL FFRAC
+ TEQ FACC,#0
+ BNE FPOWE
+IPOW MOV TYPE,SP
+ BL FLDA
+ MOV TYPE,FWGRD
+ BL FIPOW
+ PULLJ 2
+ MOV TYPE,#TFP
+ B POWERA
+INTPOW CMP FACC,#64
+ MOV FWGRD,FACC
+ BCC IPOW
+ BL FLOATB
+FPOWA BL FPUSH
+ BL FONE
+ B FPOWC
+FPOWE BL FPUSH ;push fraction
+ ADD TYPE,SP,#8
+ BL FLDA
+ MOV TYPE,FWGRD
+ BL FIPOW ;compute integer power of input
+FPOWC BL FPUSH ;multiplier
+ ADD TYPE,SP,#16
+ BL FLDA
+ BL FLOG ;ln(arg1)
+ ADD TYPE,SP,#8
+ BL FMUL ;arg2*ln(arg1)
+ BL FEXP ;exp(arg2*ln(arg1))
+ MOV TYPE,SP
+ BL FMUL
+ PULLJ 6
+ MOV TYPE,#TFP
+ B POWERA
+AECHAN MOV AELINE,LINE
+CHAN LDRB R10,[AELINE],#1
+ CMP R10,#" "
+ BEQ CHAN
+ CMP R10,#"#"
+ BNE CHANNE
+CHANNL STMFD SP!,{R14}
+ BL FACTOR
+ BL INTEGZ
+ MOV R1,FACC ;right reg for most swi's
+ LDMFD SP!,{PC}
+ LNK Factor
